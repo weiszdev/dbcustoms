@@ -606,6 +606,7 @@
     zones: {},
     activeZone: null,
     selectedConcept: null,
+    aiSeed: null,
     name: '',
     email: '',
     phone: '',
@@ -928,9 +929,17 @@
     html += '<div id="aiImageContainer" style="text-align:center;">';
     if (state.selectedConcept !== undefined && state.selectedConcept !== null) {
       var sc = concepts[state.selectedConcept];
+      var seed = state.aiSeed || (state.selectedConcept + 1);
       var prompt = encodeURIComponent('Professional product photo of a custom painted ' + typeName + ' racing helmet, ' + (state.brand || '') + ' brand, ' + sc.desc + ', colors ' + colorNames + ', ' + finishName + ' finish, studio lighting, black background, photorealistic, 4k');
-      html += '<img src="https://pollinations.ai/p/' + prompt + '?width=512&height=512&nologo=true&seed=' + (state.selectedConcept + 1) + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Generated Helmet Concept" onerror="this.parentNode.innerHTML=\'<div style=padding:40px;color:var(--gray);>Image generation loading... refresh in a moment.</div>\'">';
-      html += '<div style="margin-top:8px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — AI-generated visualization. Actual hand-painted result will be even better.</div>';
+      html += '<div style="position:relative;display:inline-block;">';
+      html += '<img id="aiImg" src="https://pollinations.ai/p/' + prompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Generated Helmet Concept" onload="document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="document.getElementById(\'aiSpinner\').innerHTML=\'Image taking longer than expected...\'">';
+      html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating AI render...</div></div></div>';
+      html += '</div>';
+      html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — AI-generated visualization. Actual hand-painted result will be even better.</div>';
+      html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
+      html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
+      html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
+      html += '</div>';
     } else {
       html += '<div style="padding:40px;color:var(--gray);background:var(--dark2);border-radius:12px;border:2px dashed var(--dark3);">Select one of the 3 concept directions above to generate an AI preview image.</div>';
     }
@@ -1151,8 +1160,17 @@
     }, 300);
   }
 
+  window._regenerateAI = function(mode) {
+    if (mode === 'different') {
+      // Cycle to next concept
+      state.selectedConcept = (state.selectedConcept + 1) % 3;
+    }
+    state.aiSeed = Math.floor(Math.random() * 99999);
+    render();
+  };
+
   window._restart = function() {
-    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], zones:{}, activeZone:null, selectedConcept:null, name:'', email:'', phone:'', timeline:'', budget:'' };
+    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], zones:{}, activeZone:null, selectedConcept:null, aiSeed:null, name:'', email:'', phone:'', timeline:'', budget:'' };
     render();
     window.scrollTo(0, 0);
   };
