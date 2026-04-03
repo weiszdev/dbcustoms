@@ -484,7 +484,7 @@
         <div><a href="tel:7012262553">701.226.2553</a></div>
         <div><a href="mailto:schtev@dbcustoms.com">schtev@dbcustoms.com</a></div>
       </div>
-      <button class="settings-btn" onclick="document.getElementById('settingsModal').classList.add('show')" title="AI Settings">&#9881;</button>
+      <button class="settings-btn" onclick="document.getElementById('settingsModal').classList.add('show')" title="AI Settings" style="display:none;">&#9881;</button>
     </div>
   </div>
 
@@ -1048,7 +1048,8 @@
     html += '</div>';
     html += '<div style="margin-top:14px;font-size:0.88rem;color:var(--gold);font-weight:600;">Concept: ' + sc.title + '</div>';
     html += '<div style="font-size:0.8rem;color:var(--gray);margin-top:4px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.5;">' + sc.desc + '</div>';
-    html += '<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
+    html += '<div id="renderStatus" style="margin-top:8px;font-size:0.72rem;color:var(--gray);min-height:16px;"></div>';
+    html += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
     html += '<button class="nav-btn next" style="font-size:0.82rem;padding:10px 22px;" onclick="window._regenerateAI()">Regenerate Design</button>';
     html += '<button class="nav-btn prev" style="font-size:0.82rem;padding:10px 22px;" onclick="window._regenerateAI(\'different\')">Try Different Concept</button>';
     html += '</div>';
@@ -1429,12 +1430,15 @@
         if (overlay) overlay.remove();
         var canvas = container.querySelector('#conceptCanvas');
         if (canvas) canvas.style.filter = 'blur(0px)';
+        var rs = document.getElementById('renderStatus');
+        if (rs) rs.textContent = GEMINI_KEY ? 'AI render unavailable — showing concept preview. Check console for details.' : 'Add API key via settings gear to enable AI renders.';
         return;
       }
 
       var model = GEMINI_MODELS[modelIdx];
       var statusEl = document.getElementById('geminiStatus');
       if (statusEl) statusEl.textContent = 'Trying ' + model + '...';
+      console.log('[DB Customs] Trying model:', model, 'Key length:', GEMINI_KEY.length);
 
       fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_KEY, {
         method: 'POST',
@@ -1470,12 +1474,15 @@
             tryModel(modelIdx + 1);
           }
         } else if (data.error) {
+          console.log('[DB Customs] API error on', model, ':', data.error.message);
           tryModel(modelIdx + 1);
         } else {
+          console.log('[DB Customs] Unknown response from', model);
           tryModel(modelIdx + 1);
         }
       })
-      .catch(function() {
+      .catch(function(err) {
+        console.log('[DB Customs] Fetch error on', model, ':', err.message || err);
         tryModel(modelIdx + 1);
       });
     }
