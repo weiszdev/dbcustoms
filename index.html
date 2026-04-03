@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DB Customs — Design Your Helmet</title>
+  <meta name="description" content="Custom helmet painting by DB Customs. Design your dream helmet — choose your style, colors, and inspiration. Hand-painted by artist Steve Braus.">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #111111;
+      --dark: #1a1a1a;
+      --dark2: #222222;
+      --dark3: #2a2a2a;
+      --gray: #888888;
+      --light: #cccccc;
+      --white: #f5f5f5;
+      --red: #e63946;
+      --red-dark: #c5303d;
+      --gold: #D4A843;
+      --green: #2ecc71;
+      --blue: #3498db;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--black); color: var(--white); min-height: 100vh; }
+    h1,h2,h3,h4 { font-family: 'Oswald', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Header */
+    .header {
+      background: var(--dark);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--red);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      height: 40px;
+      width: auto;
+    }
+    .header h1 { font-size: 1.3rem; letter-spacing: 2px; }
+    .header h1 span { color: var(--red); }
+    .header-contact {
+      font-size: 0.78rem;
+      color: var(--gray);
+      text-align: right;
+    }
+    .header-contact a { color: var(--red); }
+
+    /* Progress */
+    .progress-bar {
+      background: var(--dark);
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--dark3);
+      position: sticky;
+      top: 62px;
+      z-index: 99;
+    }
+    .progress-steps {
+      display: flex;
+      gap: 4px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .p-step {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--dark3);
+      transition: background 0.4s;
+    }
+    .p-step.done { background: var(--red); }
+    .p-step.active { background: var(--gold); }
+    .progress-label {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--gray);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Main Content */
+    .main {
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    /* Step Card */
+    .step-card {
+      background: var(--dark);
+      border: 1px solid var(--dark3);
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+    .step-card.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    .step-header {
+      background: linear-gradient(135deg, var(--dark2), var(--dark3));
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--dark3);
+    }
+    .step-num { font-size: 0.72rem; color: var(--red); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .step-header h2 { font-size: 1.4rem; margin-top: 4px; }
+    .step-header p { font-size: 0.88rem; color: var(--gray); margin-top: 6px; line-height: 1.5; }
+
+    .step-body { padding: 24px; }
+
+    /* Option Grid */
+    .opt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .opt-card {
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .opt-card:hover { border-color: var(--gray); }
+    .opt-card.selected { border-color: var(--red); background: rgba(230,57,70,0.1); }
+    .opt-card .opt-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .opt-card .opt-label { font-size: 0.82rem; font-weight: 600; }
+    .opt-card .opt-sub { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
+
+    /* Color Picker */
+    .color-section { margin-bottom: 20px; }
+    .color-label { font-size: 0.82rem; font-weight: 700; color: var(--gray); text-transform: uppercase; margin-bottom: 8px; }
+    .color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .color-swatch {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: var(--white); box-shadow: 0 0 12px rgba(255,255,255,0.3); }
+    .color-swatch.selected::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    .color-custom {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px dashed var(--gray);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--gray);
+      position: relative;
+      overflow: hidden;
+    }
+    .color-custom input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Text Input */
+    .input-group { margin-bottom: 16px; }
+    .input-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .input-group input, .input-group textarea, .input-group select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.92rem;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+    .input-group textarea { min-height: 80px; resize: vertical; }
+    .input-group select { cursor: pointer; }
+    .input-group select option { background: var(--dark2); }
+
+    /* Upload */
+    .upload-zone {
+      border: 2px dashed var(--dark3);
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+    .upload-zone:hover { border-color: var(--red); }
+    .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-zone p { font-size: 0.85rem; color: var(--gray); }
+    .upload-zone input { display: none; }
+    .upload-previews {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .upload-thumb {
+      width: 60px; height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 2px solid var(--dark3);
+    }
+
+    /* AI Encouragement */
+    .ai-bubble {
+      background: linear-gradient(135deg, rgba(230,57,70,0.1), rgba(212,168,67,0.1));
+      border: 1px solid rgba(230,57,70,0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      display: none;
+    }
+    .ai-bubble.show { display: block; animation: fadeIn 0.4s ease; }
+    .ai-bubble .ai-avatar { font-size: 1.2rem; margin-right: 8px; }
+    .ai-bubble .ai-text { font-size: 0.88rem; color: var(--light); line-height: 1.5; }
+    .ai-bubble .ai-text strong { color: var(--gold); }
+
+    /* Inspiration Gallery */
+    .inspo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .inspo-card {
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 2rem;
+    }
+    .inspo-card:hover { border-color: var(--gray); transform: scale(1.05); }
+    .inspo-card.selected { border-color: var(--red); background: rgba(230,57,70,0.1); }
+    .inspo-card .inspo-label { font-size: 0.68rem; color: var(--gray); margin-top: 4px; }
+
+    /* Navigation */
+    .step-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: var(--dark2);
+      border-top: 1px solid var(--dark3);
+    }
+    .nav-btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    .nav-btn.prev { background: var(--dark3); color: var(--light); }
+    .nav-btn.prev:hover { background: var(--gray); color: var(--white); }
+    .nav-btn.next { background: var(--red); color: var(--white); }
+    .nav-btn.next:hover { background: var(--red-dark); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* Summary / Results */
+    .summary-card {
+      background: var(--dark);
+      border: 2px solid var(--red);
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+    .summary-card h3 { color: var(--red); font-size: 1.2rem; margin-bottom: 16px; }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--dark3);
+      font-size: 0.88rem;
+    }
+    .summary-row .s-label { color: var(--gray); }
+    .summary-row .s-value { color: var(--white); font-weight: 600; }
+
+    /* AI Concepts */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .concept-card {
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .concept-card:hover { border-color: var(--gold); }
+    .concept-card .concept-icon { font-size: 3rem; margin-bottom: 10px; }
+    .concept-card h4 { font-size: 0.95rem; color: var(--gold); margin-bottom: 6px; text-transform: none; }
+    .concept-card p { font-size: 0.8rem; color: var(--gray); line-height: 1.5; }
+
+    .cta-section {
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, var(--dark2), rgba(230,57,70,0.1));
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .cta-section h3 { color: var(--white); margin-bottom: 8px; }
+    .cta-section p { color: var(--gray); font-size: 0.9rem; margin-bottom: 20px; }
+    .cta-btn {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--red);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      margin: 4px;
+    }
+    .cta-btn:hover { background: var(--red-dark); text-decoration: none; }
+    .cta-btn.gold { background: var(--gold); color: var(--black); }
+    .cta-btn.gold:hover { background: #c49a38; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 30px 24px;
+      font-size: 0.75rem;
+      color: var(--gray);
+      border-top: 1px solid var(--dark3);
+      margin-top: 40px;
+    }
+    .footer a { color: var(--red); }
+
+    @media (max-width: 600px) {
+      .header { flex-direction: column; gap: 8px; text-align: center; }
+      .opt-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+      .concept-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <img src="https://dbcustoms.com/wp-content/uploads/2024/07/DBcustoms-logo.png" alt="DB Customs" class="header-logo" onerror="this.style.display='none'">
+      <h1>DB <span>Customs</span></h1>
+    </div>
+    <div class="header-contact">
+      <div><a href="tel:7012262553">701.226.2553</a></div>
+      <div><a href="mailto:schtev@dbcustoms.com">schtev@dbcustoms.com</a></div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-bar">
+    <div class="progress-steps" id="progressSteps"></div>
+    <div class="progress-label" id="progressLabel">Step 1 of 7</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="stepsContainer"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Hand-painted by artist <strong>Steve Braus</strong> — <a href="https://dbcustoms.com">dbcustoms.com</a> | <a href="https://instagram.com/dbcustoms_paint">@dbcustoms_paint</a></p>
+    <p style="margin-top:6px;">This design tool helps you map your vision. Final designs are hand-crafted through direct consultation with the artist.</p>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ================================================================
+  // CONFIGURATION DATA
+  // ================================================================
+
+  var HELMET_TYPES = [
+    { id: 'moto', icon: '🏍️', label: 'Motocross / Off-Road', sub: 'MX, enduro, adventure' },
+    { id: 'street', icon: '🛣️', label: 'Street / Touring', sub: 'Full face, modular' },
+    { id: 'kart', icon: '🏎️', label: 'Karting', sub: 'CIK-FIA, club racing' },
+    { id: 'auto', icon: '🏁', label: 'Auto Racing', sub: 'SA2020, FIA 8859' },
+    { id: 'open', icon: '💨', label: 'Open Face / Half', sub: 'Cruiser, retro, cafe' },
+    { id: 'novelty', icon: '🎨', label: 'Other / Novelty', sub: 'Ski, skydive, display' }
+  ];
+
+  var BRANDS = {
+    moto: ['Arai','Bell','Shoei','HJC','Fox','Fly Racing','6D','Klim','Airoh','Other'],
+    street: ['Arai','Shoei','Bell','HJC','AGV','Shark','Scorpion','Icon','Sedici','Other'],
+    kart: ['Arai','Bell','Stilo','Sparco','Zamp','HJC','OMP','Other'],
+    auto: ['Arai','Bell','Stilo','Simpson','Sparco','Zamp','Pyrotect','RaceQuip','Other'],
+    open: ['Bell','Biltwell','Simpson','Shoei','Arai','GMAX','Other'],
+    novelty: ['Any Brand','Custom Shell','Other']
+  };
+
+  var DESIGN_STYLES = [
+    { id: 'racing', icon: '🏁', label: 'Racing Stripes', desc: 'Clean lines, speed-inspired' },
+    { id: 'tribal', icon: '🔥', label: 'Tribal / Flames', desc: 'Old school, aggressive' },
+    { id: 'geometric', icon: '💎', label: 'Geometric', desc: 'Sharp angles, modern' },
+    { id: 'gradient', icon: '🌅', label: 'Gradient / Fade', desc: 'Smooth color transitions' },
+    { id: 'carbon', icon: '⚡', label: 'Carbon / Tech', desc: 'Industrial, tactical' },
+    { id: 'galaxy', icon: '🌌', label: 'Galaxy / Nebula', desc: 'Cosmic, ethereal' },
+    { id: 'animal', icon: '🐺', label: 'Animal / Nature', desc: 'Skulls, wolves, eagles' },
+    { id: 'flag', icon: '🇺🇸', label: 'Flag / Patriotic', desc: 'National pride' },
+    { id: 'camo', icon: '🌿', label: 'Camo / Military', desc: 'Tactical, stealthy' },
+    { id: 'retro', icon: '🕹️', label: 'Retro / Vintage', desc: '70s vibes, classic look' },
+    { id: 'logo', icon: '🏢', label: 'Brand / Sponsor', desc: 'Team logos, sponsors' },
+    { id: 'custom', icon: '✏️', label: 'Fully Custom', desc: 'Your unique vision' }
+  ];
+
+  var COLORS = [
+    { hex: '#e63946', name: 'Red' },
+    { hex: '#1d3557', name: 'Navy' },
+    { hex: '#f1faee', name: 'White' },
+    { hex: '#111111', name: 'Black' },
+    { hex: '#457b9d', name: 'Steel Blue' },
+    { hex: '#2ecc71', name: 'Green' },
+    { hex: '#f39c12', name: 'Orange' },
+    { hex: '#D4A843', name: 'Gold' },
+    { hex: '#9b59b6', name: 'Purple' },
+    { hex: '#1abc9c', name: 'Teal' },
+    { hex: '#e74c3c', name: 'Bright Red' },
+    { hex: '#ecf0f1', name: 'Silver' },
+    { hex: '#d4ac0d', name: 'Yellow' },
+    { hex: '#e91e90', name: 'Hot Pink' },
+    { hex: '#5d4e37', name: 'Bronze' },
+    { hex: '#2c3e50', name: 'Charcoal' }
+  ];
+
+  var FINISHES = [
+    { id: 'gloss', icon: '✨', label: 'High Gloss', desc: 'Mirror-like shine' },
+    { id: 'matte', icon: '🌑', label: 'Matte / Satin', desc: 'Flat, modern look' },
+    { id: 'mix', icon: '🎭', label: 'Mixed', desc: 'Gloss + matte combo' },
+    { id: 'metallic', icon: '🪙', label: 'Metallic / Flake', desc: 'Metal flake, candy coat' }
+  ];
+
+  var AI_RESPONSES = [
+    "That's a killer combo! The contrast is going to pop under the lights.",
+    "Love that direction — Steve does incredible work with that style. This is going to turn heads.",
+    "Great eye! That color palette is going to look insane with a matte finish.",
+    "Oh man, that's a strong choice. This has podium-level energy.",
+    "Solid pick — that style photographs beautifully and looks even better in person.",
+    "You've got a great sense of design. Steve's going to love bringing this one to life.",
+    "That combination is 🔥 — trust me, people are going to ask you where you got it painted.",
+    "Nice! That's exactly the kind of detail that separates a custom lid from everything else on the grid.",
+    "You're building something special here. The color choices alone are going to set this apart.",
+    "That's the kind of design that makes people stop and look twice. Let's keep going."
+  ];
+
+  var STEP_LABELS = ['Helmet Type','Brand & Model','Design Style','Colors & Finish','Your Vision','Details','Your Design'];
+
+  // ================================================================
+  // STATE
+  // ================================================================
+  var state = {
+    step: 0,
+    type: null,
+    brand: null,
+    model: '',
+    styles: [],
+    colors: [],
+    customColors: [],
+    finish: null,
+    description: '',
+    logos: '',
+    number: '',
+    refImages: [],
+    inspoStyles: [],
+    name: '',
+    email: '',
+    phone: '',
+    timeline: '',
+    budget: ''
+  };
+
+  // ================================================================
+  // RENDER
+  // ================================================================
+  function render() {
+    renderProgress();
+    var container = document.getElementById('stepsContainer');
+    container.innerHTML = '';
+
+    var card = document.createElement('div');
+    card.className = 'step-card active';
+
+    var steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6];
+    card.innerHTML = steps[state.step]();
+    container.appendChild(card);
+
+    bindStep();
+    showAI();
+  }
+
+  function renderProgress() {
+    var el = document.getElementById('progressSteps');
+    el.innerHTML = '';
+    for (var i = 0; i < STEP_LABELS.length; i++) {
+      var s = document.createElement('div');
+      s.className = 'p-step';
+      if (i < state.step) s.className += ' done';
+      else if (i === state.step) s.className += ' active';
+      el.appendChild(s);
+    }
+    document.getElementById('progressLabel').textContent = 'Step ' + (state.step + 1) + ' of ' + STEP_LABELS.length + ' — ' + STEP_LABELS[state.step];
+  }
+
+  // Step 0: Helmet Type
+  function renderStep0() {
+    var html = '<div class="step-header"><div class="step-num">Step 1</div><h2>What Kind of Helmet?</h2><p>Pick the type of helmet you\'re bringing to the paint booth.</p></div>';
+    html += '<div class="step-body"><div class="opt-grid">';
+    HELMET_TYPES.forEach(function(t) {
+      html += '<div class="opt-card' + (state.type === t.id ? ' selected' : '') + '" data-val="' + t.id + '">';
+      html += '<div class="opt-icon">' + t.icon + '</div><div class="opt-label">' + t.label + '</div><div class="opt-sub">' + t.sub + '</div></div>';
+    });
+    html += '</div><div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 1: Brand & Model
+  function renderStep1() {
+    var brands = BRANDS[state.type] || BRANDS.moto;
+    var html = '<div class="step-header"><div class="step-num">Step 2</div><h2>Brand & Model</h2><p>Which helmet are we painting? Pick the brand and tell us the model.</p></div>';
+    html += '<div class="step-body"><div class="opt-grid">';
+    brands.forEach(function(b) {
+      html += '<div class="opt-card' + (state.brand === b ? ' selected' : '') + '" data-val="' + b + '"><div class="opt-label">' + b + '</div></div>';
+    });
+    html += '</div>';
+    html += '<div class="input-group"><label>Model Name / Number</label><input type="text" id="modelInput" placeholder="e.g. VX-Pro4, Star MIPS, X-Fifteen..." value="' + state.model + '"></div>';
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 2: Design Style
+  function renderStep2() {
+    var html = '<div class="step-header"><div class="step-num">Step 3</div><h2>Design Direction</h2><p>What style speaks to you? Pick one or more — we\'ll blend them together.</p></div>';
+    html += '<div class="step-body"><div class="opt-grid">';
+    DESIGN_STYLES.forEach(function(s) {
+      html += '<div class="opt-card' + (state.styles.indexOf(s.id) >= 0 ? ' selected' : '') + '" data-val="' + s.id + '">';
+      html += '<div class="opt-icon">' + s.icon + '</div><div class="opt-label">' + s.label + '</div><div class="opt-sub">' + s.desc + '</div></div>';
+    });
+    html += '</div>';
+
+    // Inspiration gallery
+    html += '<div style="margin-top:16px;"><div class="color-label">Lines & Patterns You Like</div>';
+    html += '<div class="inspo-grid">';
+    var patterns = [
+      { id:'pinstripe', icon:'〰️', label:'Pinstripe' },
+      { id:'checkers', icon:'🏁', label:'Checkers' },
+      { id:'splatter', icon:'💦', label:'Splatter' },
+      { id:'torn', icon:'⚡', label:'Torn / Ripped' },
+      { id:'swoosh', icon:'🌊', label:'Swoosh / Flow' },
+      { id:'hex', icon:'⬡', label:'Hex Pattern' },
+      { id:'dots', icon:'●', label:'Dots / Halftone' },
+      { id:'arrows', icon:'▶', label:'Arrows' }
+    ];
+    patterns.forEach(function(p) {
+      html += '<div class="inspo-card' + (state.inspoStyles.indexOf(p.id) >= 0 ? ' selected' : '') + '" data-inspo="' + p.id + '">' + p.icon + '<div class="inspo-label">' + p.label + '</div></div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 3: Colors & Finish
+  function renderStep3() {
+    var html = '<div class="step-header"><div class="step-num">Step 4</div><h2>Colors & Finish</h2><p>Pick your primary colors (up to 4) and your finish type.</p></div>';
+    html += '<div class="step-body">';
+
+    html += '<div class="color-section"><div class="color-label">Pick Your Colors (up to 4)</div><div class="color-row">';
+    COLORS.forEach(function(c) {
+      var sel = state.colors.indexOf(c.hex) >= 0;
+      html += '<div class="color-swatch' + (sel ? ' selected' : '') + '" style="background:' + c.hex + '" data-color="' + c.hex + '" title="' + c.name + '"></div>';
+    });
+    html += '<div class="color-custom" title="Custom color"><input type="color" id="customColor" value="#ff6600">+</div>';
+    html += '</div></div>';
+
+    // Selected colors display
+    if (state.colors.length > 0) {
+      html += '<div style="margin-bottom:16px;"><div class="color-label">Your Palette</div><div style="display:flex;gap:6px;">';
+      state.colors.forEach(function(c) {
+        var name = COLORS.find(function(x){ return x.hex === c; });
+        html += '<div style="display:flex;align-items:center;gap:4px;background:var(--dark2);padding:4px 10px;border-radius:16px;font-size:0.75rem;">';
+        html += '<div style="width:14px;height:14px;border-radius:50%;background:' + c + ';"></div>' + (name ? name.name : c) + '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    html += '<div class="color-label" style="margin-top:16px;">Finish Type</div><div class="opt-grid">';
+    FINISHES.forEach(function(f) {
+      html += '<div class="opt-card' + (state.finish === f.id ? ' selected' : '') + '" data-finish="' + f.id + '">';
+      html += '<div class="opt-icon">' + f.icon + '</div><div class="opt-label">' + f.label + '</div><div class="opt-sub">' + f.desc + '</div></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 4: Your Vision
+  function renderStep4() {
+    var html = '<div class="step-header"><div class="step-num">Step 5</div><h2>Tell Us Your Vision</h2><p>Describe what you see in your head. The more detail, the closer we get it first try.</p></div>';
+    html += '<div class="step-body">';
+
+    html += '<div class="input-group"><label>Describe Your Dream Design</label><textarea id="descInput" placeholder="Paint me a picture with words... What do you see when you close your eyes and imagine this helmet on the grid? Colors flowing from front to back? A skull emerging from smoke? Your number wrapped in flames? Tell us everything.">' + state.description + '</textarea></div>';
+
+    html += '<div class="input-group"><label>Logos / Sponsors / Text</label><input type="text" id="logosInput" placeholder="e.g. Monster Energy, Fox Racing, your team name..." value="' + state.logos + '"></div>';
+
+    html += '<div class="input-group"><label>Your Number (if applicable)</label><input type="text" id="numberInput" placeholder="e.g. 42, 7X, etc." value="' + state.number + '"></div>';
+
+    // Reference image upload
+    html += '<div class="color-label">Reference Images</div>';
+    html += '<div class="upload-zone" id="uploadZone"><div class="upload-icon">📸</div><p>Tap to upload reference images — helmets you like, design sketches, logos, color samples</p><input type="file" id="fileInput" multiple accept="image/*"></div>';
+    html += '<div class="upload-previews" id="uploadPreviews"></div>';
+
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 5: Contact Details
+  function renderStep5() {
+    var html = '<div class="step-header"><div class="step-num">Step 6</div><h2>Almost There</h2><p>Tell us how to reach you and a few more details.</p></div>';
+    html += '<div class="step-body">';
+    html += '<div class="input-group"><label>Your Name</label><input type="text" id="nameInput" placeholder="First and last name" value="' + state.name + '"></div>';
+    html += '<div class="input-group"><label>Email</label><input type="email" id="emailInput" placeholder="your@email.com" value="' + state.email + '"></div>';
+    html += '<div class="input-group"><label>Phone (optional)</label><input type="tel" id="phoneInput" placeholder="701-555-0123" value="' + state.phone + '"></div>';
+    html += '<div class="input-group"><label>Timeline</label><select id="timelineInput"><option value="">When do you need it?</option>';
+    ['No rush — whenever it\'s ready','2-4 weeks','4-8 weeks','Need it for an event (specify in description)','Just exploring ideas'].forEach(function(t) {
+      html += '<option' + (state.timeline === t ? ' selected' : '') + '>' + t + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div class="input-group"><label>Budget Range</label><select id="budgetInput"><option value="">Approximate budget</option>';
+    ['Under $300','$300 - $500','$500 - $800','$800 - $1,200','$1,200+','Not sure yet'].forEach(function(b) {
+      html += '<option' + (state.budget === b ? ' selected' : '') + '>' + b + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 6: Results / AI Concepts
+  function renderStep6() {
+    var styleName = state.styles.map(function(s) {
+      var found = DESIGN_STYLES.find(function(d){ return d.id === s; });
+      return found ? found.label : s;
+    }).join(' + ') || 'Custom';
+
+    var colorNames = state.colors.map(function(c) {
+      var found = COLORS.find(function(x){ return x.hex === c; });
+      return found ? found.name : c;
+    }).join(', ');
+
+    var finishName = FINISHES.find(function(f){ return f.id === state.finish; });
+    finishName = finishName ? finishName.label : 'TBD';
+
+    var typeName = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+    typeName = typeName ? typeName.label : '';
+
+    var html = '<div class="step-header"><div class="step-num">Your Design</div><h2>Here\'s What We\'re Working With</h2><p>Review your design brief below. Steve will use this as the starting point for your custom helmet.</p></div>';
+    html += '<div class="step-body">';
+
+    // Summary
+    html += '<div class="summary-card"><h3>Design Brief</h3>';
+    html += '<div class="summary-row"><span class="s-label">Helmet Type</span><span class="s-value">' + typeName + '</span></div>';
+    html += '<div class="summary-row"><span class="s-label">Brand</span><span class="s-value">' + (state.brand || 'TBD') + '</span></div>';
+    html += '<div class="summary-row"><span class="s-label">Model</span><span class="s-value">' + (state.model || 'TBD') + '</span></div>';
+    html += '<div class="summary-row"><span class="s-label">Style</span><span class="s-value">' + styleName + '</span></div>';
+    html += '<div class="summary-row"><span class="s-label">Colors</span><span class="s-value">' + (colorNames || 'TBD') + '</span></div>';
+    html += '<div class="summary-row"><span class="s-label">Finish</span><span class="s-value">' + finishName + '</span></div>';
+    if (state.number) html += '<div class="summary-row"><span class="s-label">Number</span><span class="s-value">' + state.number + '</span></div>';
+    if (state.logos) html += '<div class="summary-row"><span class="s-label">Logos</span><span class="s-value">' + state.logos + '</span></div>';
+    if (state.timeline) html += '<div class="summary-row"><span class="s-label">Timeline</span><span class="s-value">' + state.timeline + '</span></div>';
+    if (state.budget) html += '<div class="summary-row"><span class="s-label">Budget</span><span class="s-value">' + state.budget + '</span></div>';
+    if (state.description) {
+      html += '<div style="padding:12px 0;border-bottom:1px solid var(--dark3);"><span class="s-label" style="display:block;margin-bottom:4px;">Your Vision</span>';
+      html += '<span class="s-value" style="font-weight:400;line-height:1.5;">"' + state.description + '"</span></div>';
+    }
+    html += '</div>';
+
+    // AI Concept Suggestions
+    html += '<h3 style="color:var(--gold);margin-bottom:12px;font-size:1.1rem;">3 Concept Directions From the Studio</h3>';
+    html += '<div class="concept-grid">';
+
+    var concepts = generateConcepts(styleName, colorNames, finishName, typeName);
+    concepts.forEach(function(c) {
+      html += '<div class="concept-card"><div class="concept-icon">' + c.icon + '</div><h4>' + c.title + '</h4><p>' + c.desc + '</p></div>';
+    });
+    html += '</div>';
+
+    // Encouragement
+    html += '<div class="ai-bubble show"><span class="ai-avatar">🎨</span><span class="ai-text"><strong>Steve says:</strong> "This is a strong design brief. I can already see where this is going. Let\'s get on a call and dial in the details — I\'ll have some sketches ready to show you within a few days of our conversation."</span></div>';
+
+    // CTA
+    html += '<div class="cta-section"><h3>Ready to Make It Real?</h3><p>Call or email Steve to discuss your design. He\'ll walk you through materials, timeline, and turn your vision into a one-of-a-kind helmet.</p>';
+    html += '<a href="tel:7012262553" class="cta-btn">Call 701.226.2553</a>';
+    html += '<a href="mailto:schtev@dbcustoms.com?subject=Custom Helmet Design — ' + encodeURIComponent(state.name || 'New Inquiry') + '&body=' + encodeURIComponent(buildEmailBody()) + '" class="cta-btn gold">Email Your Design Brief</a>';
+    html += '</div>';
+
+    html += '<div style="text-align:center;margin-top:16px;"><button class="nav-btn prev" onclick="window._restart()">Start New Design</button></div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function generateConcepts(style, colors, finish, type) {
+    var base = [
+      { icon: '🎯', title: 'The ' + (state.brand || 'Clean') + ' Statement', desc: 'Bold ' + (colors || 'contrast') + ' color blocking with ' + finish.toLowerCase() + ' finish. ' + style + ' lines flowing crown-to-chin. Your number integrated into the design, not just placed on top. Minimal but impactful.' },
+      { icon: '🔥', title: 'The Full Send', desc: 'Maximum visual impact — ' + style.toLowerCase() + ' covering the entire shell with ' + (colors || 'metallic') + ' tones. Logos and number woven into the pattern rather than floating. ' + finish + ' base with contrasting accents.' },
+      { icon: '🖤', title: 'The Stealth Build', desc: 'Understated power — dark base with subtle ' + (colors || 'accent') + ' details that reveal themselves in direct light. ' + style + ' elements in ' + finish.toLowerCase() + ' against matte black. Minimal logos. Maximum presence.' }
+    ];
+    return base;
+  }
+
+  function buildEmailBody() {
+    var lines = [];
+    lines.push('CUSTOM HELMET DESIGN BRIEF');
+    lines.push('========================');
+    lines.push('');
+    var typeName = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+    lines.push('Helmet Type: ' + (typeName ? typeName.label : ''));
+    lines.push('Brand: ' + (state.brand || ''));
+    lines.push('Model: ' + (state.model || ''));
+    lines.push('Style: ' + state.styles.join(', '));
+    lines.push('Colors: ' + state.colors.join(', '));
+    lines.push('Finish: ' + (state.finish || ''));
+    if (state.number) lines.push('Number: ' + state.number);
+    if (state.logos) lines.push('Logos: ' + state.logos);
+    lines.push('');
+    if (state.description) { lines.push('Vision: ' + state.description); lines.push(''); }
+    lines.push('Name: ' + state.name);
+    lines.push('Email: ' + state.email);
+    if (state.phone) lines.push('Phone: ' + state.phone);
+    if (state.timeline) lines.push('Timeline: ' + state.timeline);
+    if (state.budget) lines.push('Budget: ' + state.budget);
+    lines.push('');
+    lines.push('— Sent from DB Customs Design Tool');
+    return lines.join('\n');
+  }
+
+  function navHTML() {
+    return '<div class="step-nav">' +
+      '<button class="nav-btn prev" id="prevBtn"' + (state.step === 0 ? ' disabled' : '') + '>&larr; Back</button>' +
+      '<button class="nav-btn next" id="nextBtn">' + (state.step === 5 ? 'See My Design &rarr;' : 'Next &rarr;') + '</button>' +
+      '</div>';
+  }
+
+  // ================================================================
+  // BINDINGS
+  // ================================================================
+  function bindStep() {
+    // Opt cards
+    document.querySelectorAll('.opt-card[data-val]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var val = el.getAttribute('data-val');
+        if (state.step === 0) { state.type = val; }
+        else if (state.step === 1) { state.brand = val; }
+        else if (state.step === 2) {
+          var idx = state.styles.indexOf(val);
+          if (idx >= 0) state.styles.splice(idx, 1); else state.styles.push(val);
+        }
+        showAI();
+        render();
+      });
+    });
+
+    // Finish cards
+    document.querySelectorAll('.opt-card[data-finish]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        state.finish = el.getAttribute('data-finish');
+        showAI();
+        render();
+      });
+    });
+
+    // Color swatches
+    document.querySelectorAll('.color-swatch[data-color]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var c = el.getAttribute('data-color');
+        var idx = state.colors.indexOf(c);
+        if (idx >= 0) { state.colors.splice(idx, 1); }
+        else if (state.colors.length < 4) { state.colors.push(c); showAI(); }
+        render();
+      });
+    });
+
+    // Custom color
+    var cc = document.getElementById('customColor');
+    if (cc) {
+      cc.addEventListener('change', function() {
+        if (state.colors.length < 4) { state.colors.push(cc.value); render(); }
+      });
+    }
+
+    // Inspiration patterns
+    document.querySelectorAll('.inspo-card[data-inspo]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var val = el.getAttribute('data-inspo');
+        var idx = state.inspoStyles.indexOf(val);
+        if (idx >= 0) state.inspoStyles.splice(idx, 1); else state.inspoStyles.push(val);
+        render();
+      });
+    });
+
+    // Text inputs
+    var inputs = { modelInput: 'model', descInput: 'description', logosInput: 'logos', numberInput: 'number', nameInput: 'name', emailInput: 'email', phoneInput: 'phone' };
+    Object.keys(inputs).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.addEventListener('input', function() { state[inputs[id]] = el.value; }); }
+    });
+
+    // Selects
+    var tl = document.getElementById('timelineInput');
+    if (tl) tl.addEventListener('change', function() { state.timeline = tl.value; });
+    var bg = document.getElementById('budgetInput');
+    if (bg) bg.addEventListener('change', function() { state.budget = bg.value; });
+
+    // File upload
+    var uz = document.getElementById('uploadZone');
+    var fi = document.getElementById('fileInput');
+    if (uz && fi) {
+      uz.addEventListener('click', function() { fi.click(); });
+      fi.addEventListener('change', function() {
+        var pp = document.getElementById('uploadPreviews');
+        Array.from(fi.files).forEach(function(file) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            state.refImages.push(e.target.result);
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'upload-thumb';
+            pp.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    // Nav
+    var next = document.getElementById('nextBtn');
+    var prev = document.getElementById('prevBtn');
+    if (next) next.addEventListener('click', function() { if (state.step < 6) { state.step++; render(); } });
+    if (prev) prev.addEventListener('click', function() { if (state.step > 0) { state.step--; render(); } });
+  }
+
+  function showAI() {
+    setTimeout(function() {
+      var bubble = document.getElementById('aiBubble');
+      if (!bubble) return;
+      var msg = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+      bubble.innerHTML = '<span class="ai-avatar">🎨</span><span class="ai-text"><strong>Steve\'s Studio AI:</strong> ' + msg + '</span>';
+      bubble.classList.add('show');
+    }, 300);
+  }
+
+  window._restart = function() {
+    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], name:'', email:'', phone:'', timeline:'', budget:'' };
+    render();
+    window.scrollTo(0, 0);
+  };
+
+  // ================================================================
+  // INIT
+  // ================================================================
+  render();
+
+})();
+</script>
+
+</body>
+</html>
