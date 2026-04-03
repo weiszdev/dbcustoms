@@ -867,6 +867,20 @@
     var html = '<div class="step-header"><div class="step-num">Your Design</div><h2>Here\'s What We\'re Working With</h2><p>Review your design brief below. Steve will use this as the starting point for your custom helmet.</p></div>';
     html += '<div class="step-body">';
 
+    // Loading overlay (hidden after canvases render)
+    html += '<div id="loadingOverlay" style="text-align:center;padding:50px 20px;">';
+    html += '<div style="font-size:3rem;margin-bottom:16px;animation:pulse 1.5s infinite;">🎨</div>';
+    html += '<h3 style="color:var(--gold);font-size:1.3rem;margin-bottom:8px;">Building Your Design Preview</h3>';
+    html += '<p style="color:var(--gray);font-size:0.9rem;margin-bottom:20px;">Rendering helmet views and generating your concept...</p>';
+    html += '<div style="width:200px;height:6px;background:var(--dark3);border-radius:3px;margin:0 auto;overflow:hidden;">';
+    html += '<div id="loadBar" style="width:0%;height:100%;background:var(--red);border-radius:3px;transition:width 0.3s;"></div></div>';
+    html += '<div id="loadPct" style="font-size:0.8rem;color:var(--gray);margin-top:8px;">0%</div>';
+    html += '</div>';
+    html += '<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}</style>';
+
+    // Content container — hidden until loading completes
+    html += '<div id="resultsContent" style="display:none;">';
+
     // Summary
     html += '<div class="summary-card"><h3>Design Brief</h3>';
     html += '<div class="summary-row"><span class="s-label">Helmet Type</span><span class="s-value">' + typeName + '</span></div>';
@@ -933,7 +947,8 @@
 
     html += '<div style="text-align:center;margin-top:16px;"><button class="nav-btn prev" onclick="window._restart()">Start New Design</button></div>';
 
-    html += '</div>';
+    html += '</div>'; // close resultsContent
+    html += '</div>'; // close step-body
     return html;
   }
 
@@ -1431,11 +1446,54 @@
     link.click();
   };
 
-  // Hook render to draw canvases after step 7 renders
+  // Hook render to draw canvases after step 7 renders with loading animation
   var _origRender = render;
   render = function() {
     _origRender();
-    if (state.step === 7) renderHelmetCanvases();
+    if (state.step === 7) {
+      var overlay = document.getElementById('loadingOverlay');
+      var content = document.getElementById('resultsContent');
+      var bar = document.getElementById('loadBar');
+      var pct = document.getElementById('loadPct');
+
+      if (overlay && content && bar) {
+        overlay.style.display = 'block';
+        content.style.display = 'none';
+
+        var progress = 0;
+        var messages = [
+          { at: 10, text: 'Analyzing your color palette...' },
+          { at: 25, text: 'Mapping zone assignments...' },
+          { at: 40, text: 'Rendering front view...' },
+          { at: 55, text: 'Rendering side view...' },
+          { at: 70, text: 'Rendering back view...' },
+          { at: 85, text: 'Generating concept directions...' },
+          { at: 95, text: 'Finalizing your design brief...' }
+        ];
+        var msgEl = overlay.querySelector('p');
+
+        var interval = setInterval(function() {
+          progress += 2 + Math.floor(Math.random() * 4);
+          if (progress > 100) progress = 100;
+          bar.style.width = progress + '%';
+          if (pct) pct.textContent = progress + '%';
+
+          messages.forEach(function(m) {
+            if (progress >= m.at && msgEl) msgEl.textContent = m.text;
+          });
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(function() {
+              overlay.style.display = 'none';
+              content.style.display = 'block';
+              renderHelmetCanvases();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 400);
+          }
+        }, 80);
+      }
+    }
   };
 
   // ================================================================
