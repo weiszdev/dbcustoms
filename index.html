@@ -653,6 +653,8 @@
     number: '',
     refImages: [],
     inspoStyles: [],
+    pinLine: 'standard',
+    pinLineColor: '#111111',
     zones: {},
     activeZone: null,
     selectedConcept: null,
@@ -786,6 +788,47 @@
       html += '<div class="opt-card' + (state.finish === f.id ? ' selected' : '') + '" data-finish="' + f.id + '">';
       html += '<div class="opt-icon">' + f.icon + '</div><div class="opt-label">' + f.label + '</div><div class="opt-sub">' + f.desc + '</div></div>';
     });
+    html += '</div>';
+
+    // Pin Lines — required for standard pricing
+    html += '<div style="margin-top:20px;padding:20px;background:var(--dark2);border:2px solid var(--gold);border-radius:10px;">';
+    html += '<div class="color-label" style="color:var(--gold);">Pin Lines (Color Transition Borders)</div>';
+    html += '<p style="font-size:0.85rem;color:var(--light);line-height:1.5;margin-bottom:12px;">Every DB Customs design includes <strong style="color:var(--gold);">pin lines</strong> — thin accent lines that define the borders between color transitions. Pin lines are part of Steve\'s signature technique. They make color transitions cleaner, sharper, and more professional — and they save significant production time.</p>';
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">';
+
+    var pinOptions = [
+      { id: 'standard', label: 'Standard Pin Lines', desc: 'Included in base price', icon: '✓' },
+      { id: 'no-pin', label: 'No Pin Lines', desc: 'Blended transitions — adds $300+', icon: '💰' }
+    ];
+    pinOptions.forEach(function(p) {
+      var sel = state.pinLine === p.id;
+      html += '<div class="opt-card' + (sel ? ' selected' : '') + '" data-pin="' + p.id + '" style="flex:1;min-width:140px;">';
+      html += '<div class="opt-icon">' + p.icon + '</div><div class="opt-label">' + p.label + '</div><div class="opt-sub">' + p.desc + '</div></div>';
+    });
+    html += '</div>';
+
+    if (state.pinLine === 'standard') {
+      html += '<div class="color-label" style="margin-bottom:6px;">Pin Line Color</div><div class="color-row">';
+      var pinColors = [
+        { hex: '#111111', name: 'Black' },
+        { hex: '#f5f5f5', name: 'White' },
+        { hex: '#D4A843', name: 'Gold' },
+        { hex: '#ecf0f1', name: 'Silver' },
+        { hex: '#e63946', name: 'Red' }
+      ];
+      pinColors.forEach(function(c) {
+        var sel = state.pinLineColor === c.hex;
+        html += '<div class="color-swatch' + (sel ? ' selected' : '') + '" style="background:' + c.hex + ';width:32px;height:32px;" data-pincolor="' + c.hex + '" title="' + c.name + '"></div>';
+      });
+      html += '</div>';
+    }
+
+    if (state.pinLine === 'no-pin') {
+      html += '<div style="margin-top:8px;padding:10px 14px;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);border-radius:8px;font-size:0.82rem;color:var(--red);">';
+      html += '<strong>Note:</strong> Removing pin lines requires hand-blended color transitions — this adds $300+ to the design cost and extends the timeline by 3-5 days. Most riders prefer pin lines for the crisp, professional look.';
+      html += '</div>';
+    }
+
     html += '</div>';
 
     html += '<div class="ai-bubble" id="aiBubble"></div></div>';
@@ -940,6 +983,10 @@
     html += '<div class="summary-row"><span class="s-label">Style</span><span class="s-value">' + styleName + '</span></div>';
     html += '<div class="summary-row"><span class="s-label">Colors</span><span class="s-value">' + (colorNames || 'TBD') + '</span></div>';
     html += '<div class="summary-row"><span class="s-label">Finish</span><span class="s-value">' + finishName + '</span></div>';
+    var pinLabel = state.pinLine === 'standard' ? 'Standard Pin Lines' : 'No Pin Lines (+$300)';
+    var pinColorName = COLORS.find(function(x){ return x.hex === state.pinLineColor; });
+    if (state.pinLine === 'standard' && pinColorName) pinLabel += ' — ' + pinColorName.name;
+    html += '<div class="summary-row"><span class="s-label">Pin Lines</span><span class="s-value">' + pinLabel + '</span></div>';
     if (state.number) html += '<div class="summary-row"><span class="s-label">Number</span><span class="s-value">' + state.number + '</span></div>';
     if (state.logos) html += '<div class="summary-row"><span class="s-label">Logos</span><span class="s-value">' + state.logos + '</span></div>';
     if (state.timeline) html += '<div class="summary-row"><span class="s-label">Timeline</span><span class="s-value">' + state.timeline + '</span></div>';
@@ -1041,6 +1088,8 @@
     lines.push('Style: ' + state.styles.join(', '));
     lines.push('Colors: ' + state.colors.join(', '));
     lines.push('Finish: ' + (state.finish || ''));
+    lines.push('Pin Lines: ' + (state.pinLine === 'standard' ? 'Standard (included)' : 'No pin lines (+$300)'));
+    if (state.pinLine === 'standard') lines.push('Pin Line Color: ' + state.pinLineColor);
     if (state.number) lines.push('Number: ' + state.number);
     if (state.logos) lines.push('Logos: ' + state.logos);
     // Zone assignments
@@ -1127,6 +1176,21 @@
         var val = el.getAttribute('data-inspo');
         var idx = state.inspoStyles.indexOf(val);
         if (idx >= 0) state.inspoStyles.splice(idx, 1); else state.inspoStyles.push(val);
+        render();
+      });
+    });
+
+    // Pin line selection
+    document.querySelectorAll('[data-pin]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        state.pinLine = el.getAttribute('data-pin');
+        showAI();
+        render();
+      });
+    });
+    document.querySelectorAll('[data-pincolor]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        state.pinLineColor = el.getAttribute('data-pincolor');
         render();
       });
     });
@@ -1271,6 +1335,10 @@
     prompt += 'Finish: ' + finishStr + '. ';
     if (conceptDesc) prompt += 'Design concept: ' + conceptDesc + '. ';
     if (zoneParts.length > 0) prompt += 'Zone layout: ' + zoneParts.join('; ') + '. ';
+    if (state.pinLine === 'standard') {
+      var plcName = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'black';
+      prompt += 'Thin ' + plcName + ' pin stripe lines define every color transition border, giving clean sharp edges between color zones. ';
+    }
     if (state.number) prompt += 'Racing number "' + state.number + '" prominently displayed. ';
     if (state.logos) prompt += 'Logos/text: ' + state.logos + '. ';
     if (state.description) prompt += 'Artist vision: ' + state.description + '. ';
@@ -1374,7 +1442,7 @@
   };
 
   window._restart = function() {
-    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], zones:{}, activeZone:null, selectedConcept:null, aiSeed:null, name:'', email:'', phone:'', timeline:'', budget:'' };
+    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, pinLine:'standard', pinLineColor:'#111111', description:'', logos:'', number:'', refImages:[], inspoStyles:[], zones:{}, activeZone:null, selectedConcept:null, aiSeed:null, name:'', email:'', phone:'', timeline:'', budget:'' };
     render();
     window.scrollTo(0, 0);
   };
