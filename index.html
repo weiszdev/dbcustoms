@@ -942,6 +942,9 @@
 
   // Step 6: Results / AI Concepts
   function renderStep6() {
+    // Auto-select first concept on first load
+    if (state.selectedConcept === null) state.selectedConcept = 0;
+
     var styleName = state.styles.map(function(s) {
       var found = DESIGN_STYLES.find(function(d){ return d.id === s; });
       return found ? found.label : s;
@@ -961,16 +964,26 @@
     var html = '<div class="step-header"><div class="step-num">Your Design</div><h2>Here\'s What We\'re Working With</h2><p>Review your design brief below. Steve will use this as the starting point for your custom helmet.</p></div>';
     html += '<div class="step-body">';
 
-    // Loading overlay (hidden after canvases render)
+    // Loading overlay with countdown — stays visible until AI image is actually loaded
     html += '<div id="loadingOverlay" style="text-align:center;padding:50px 20px;">';
     html += '<div style="font-size:3rem;margin-bottom:16px;animation:pulse 1.5s infinite;">🎨</div>';
-    html += '<h3 style="color:var(--gold);font-size:1.3rem;margin-bottom:8px;">Building Your Design Preview</h3>';
-    html += '<p style="color:var(--gray);font-size:0.9rem;margin-bottom:20px;">Rendering helmet views and generating your concept...</p>';
-    html += '<div style="width:200px;height:6px;background:var(--dark3);border-radius:3px;margin:0 auto;overflow:hidden;">';
-    html += '<div id="loadBar" style="width:0%;height:100%;background:var(--red);border-radius:3px;transition:width 0.3s;"></div></div>';
-    html += '<div id="loadPct" style="font-size:0.8rem;color:var(--gray);margin-top:8px;">0%</div>';
+    html += '<h3 style="color:var(--gold);font-size:1.3rem;margin-bottom:8px;">Building Your Custom Helmet</h3>';
+    html += '<div id="loadStatus" style="color:var(--gray);font-size:0.9rem;margin-bottom:16px;">Preparing your design...</div>';
+    html += '<div id="loadCountdown" style="font-size:3rem;font-family:Oswald,sans-serif;color:var(--white);margin-bottom:12px;">30</div>';
+    html += '<div style="font-size:0.78rem;color:var(--gray);">seconds remaining</div>';
+    html += '<div style="width:250px;height:6px;background:var(--dark3);border-radius:3px;margin:16px auto 0;overflow:hidden;">';
+    html += '<div id="loadBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:3px;transition:width 1s linear;"></div></div>';
     html += '</div>';
     html += '<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}</style>';
+
+    // Hidden preload image — starts loading immediately when this HTML renders
+    var sc = concepts[state.selectedConcept];
+    var preloadSeed = state.aiSeed || (state.selectedConcept + 1);
+    var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ' design, ' + (colorNames || 'bold colors') + ', ' + finishName.toLowerCase() + ' finish';
+    if (state.number) shortPrompt += ', number ' + state.number;
+    if (state.pinLine === 'standard') { var plc = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'black'; shortPrompt += ', thin ' + plc + ' pin lines at color transitions'; }
+    shortPrompt += ', ' + sc.desc + ', professional product photo, studio lighting, white background, photorealistic';
+    html += '<img id="preloadImg" src="https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt) + '?width=768&height=768&nologo=true&seed=' + preloadSeed + '" style="display:none;" crossorigin="anonymous">';
 
     // Content container — hidden until loading completes
     html += '<div id="resultsContent" style="display:none;">';
@@ -1024,31 +1037,16 @@
     html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI-Generated Concept Render</h3>';
     html += '<p style="font-size:0.82rem;color:var(--gray);margin-bottom:12px;">Select a concept direction above to generate an AI visualization of your helmet design.</p>';
     html += '<div id="aiImageContainer" style="text-align:center;">';
-    if (state.selectedConcept !== undefined && state.selectedConcept !== null) {
-      var sc = concepts[state.selectedConcept];
-      var seed = state.aiSeed || (state.selectedConcept + 1);
-      var fullPrompt = buildImagePrompt(sc.desc);
-
-      // Render via Pollinations — short focused prompt for better results
-      var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ' design, ' + (colorNames || 'bold colors') + ', ' + finishName.toLowerCase() + ' finish';
-      if (state.number) shortPrompt += ', number ' + state.number;
-      shortPrompt += ', ' + sc.desc + ', professional product photo, studio lighting, white background, photorealistic, 4k';
-      var encodedPrompt = encodeURIComponent(shortPrompt);
-
-      html += '<div id="geminiRender" style="text-align:center;">';
-      html += '<div style="position:relative;display:inline-block;max-width:100%;min-height:300px;">';
-      html += '<img id="aiImg" crossorigin="anonymous" src="https://image.pollinations.ai/prompt/' + encodedPrompt + '?width=768&height=768&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;" alt="Custom Helmet Render">';
-      html += '<div id="aiSpinner" style="padding:60px 20px;text-align:center;background:var(--dark2);border-radius:12px;min-height:300px;display:flex;align-items:center;justify-content:center;"><div><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);margin-top:12px;font-weight:600;">Rendering your helmet design...</div><div id="aiTimer" style="font-size:2rem;color:var(--white);margin-top:8px;font-family:Oswald,sans-serif;">0s</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">AI renders typically take 15-30 seconds</div><div id="aiRetryMsg" style="font-size:0.78rem;color:var(--red);margin-top:10px;display:none;">Taking longer than expected — image is still generating</div></div></div>';
-      html += '</div>';
-      html += '</div>';
-      html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — ' + (GEMINI_KEY ? 'Nano Banana (Gemini)' : 'AI visualization') + '. Actual hand-painted result will be even better.</div>';
-      html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
-      html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
-      html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
-      html += '</div>';
-    } else {
-      html += '<div style="padding:40px;color:var(--gray);background:var(--dark2);border-radius:12px;border:2px dashed var(--dark3);">Select one of the 3 concept directions above to generate an AI preview image.</div>';
-    }
+    var sc = concepts[state.selectedConcept];
+    html += '<div id="geminiRender" style="text-align:center;">';
+    html += '<img id="aiImg" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;" alt="Custom Helmet Render">';
+    html += '<div id="aiSpinner" style="padding:40px 20px;text-align:center;background:var(--dark2);border-radius:12px;min-height:200px;display:flex;align-items:center;justify-content:center;"><div><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.85rem;color:var(--gold);margin-top:8px;">Waiting for AI render...</div><div id="aiTimer" style="font-size:1.5rem;color:var(--white);margin-top:4px;font-family:Oswald,sans-serif;"></div></div></div>';
+    html += '</div>';
+    html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — AI visualization. Actual hand-painted result will be even better.</div>';
+    html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
+    html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
+    html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
+    html += '</div>';
     html += '</div>';
 
     // Encouragement
@@ -1750,46 +1748,68 @@
       var overlay = document.getElementById('loadingOverlay');
       var content = document.getElementById('resultsContent');
       var bar = document.getElementById('loadBar');
-      var pct = document.getElementById('loadPct');
+      var countdown = document.getElementById('loadCountdown');
+      var statusEl = document.getElementById('loadStatus');
+      var preImg = document.getElementById('preloadImg');
 
-      if (overlay && content && bar) {
+      if (overlay && content) {
         overlay.style.display = 'block';
         content.style.display = 'none';
 
-        var progress = 0;
-        var messages = [
-          { at: 10, text: 'Analyzing your color palette...' },
-          { at: 25, text: 'Mapping zone assignments...' },
-          { at: 40, text: 'Rendering front view...' },
-          { at: 55, text: 'Rendering side view...' },
-          { at: 70, text: 'Rendering back view...' },
-          { at: 85, text: 'Generating concept directions...' },
-          { at: 95, text: 'Finalizing your design brief...' }
-        ];
-        var msgEl = overlay.querySelector('p');
+        var totalSeconds = 30;
+        var secondsLeft = totalSeconds;
+        var imageLoaded = false;
 
-        var interval = setInterval(function() {
-          progress += 2 + Math.floor(Math.random() * 4);
-          if (progress > 100) progress = 100;
-          bar.style.width = progress + '%';
-          if (pct) pct.textContent = progress + '%';
+        var messages = [
+          { at: 28, text: 'Analyzing your color palette...' },
+          { at: 24, text: 'Mapping zone assignments to helmet shell...' },
+          { at: 20, text: 'Rendering 3-view canvas preview...' },
+          { at: 16, text: 'Generating AI helmet render...' },
+          { at: 12, text: 'Applying your design choices...' },
+          { at: 8, text: 'Adding pin lines and effects...' },
+          { at: 4, text: 'Finalizing your design...' },
+          { at: 1, text: 'Almost there...' }
+        ];
+
+        // Watch for preload image to finish loading
+        if (preImg) {
+          preImg.onload = function() {
+            imageLoaded = true;
+            // Transfer to the visible img element
+            var aiImg = document.getElementById('aiImg');
+            if (aiImg) {
+              aiImg.src = preImg.src;
+              aiImg.style.display = 'block';
+              var spinner = document.getElementById('aiSpinner');
+              if (spinner) spinner.style.display = 'none';
+            }
+          };
+        }
+
+        var timer = setInterval(function() {
+          secondsLeft--;
+          if (countdown) countdown.textContent = Math.max(secondsLeft, 0);
+          if (bar) bar.style.width = (((totalSeconds - secondsLeft) / totalSeconds) * 100) + '%';
 
           messages.forEach(function(m) {
-            if (progress >= m.at && msgEl) msgEl.textContent = m.text;
+            if (secondsLeft <= m.at && statusEl && statusEl.textContent !== m.text) statusEl.textContent = m.text;
           });
 
-          if (progress >= 100) {
-            clearInterval(interval);
-            setTimeout(function() {
-              overlay.style.display = 'none';
-              content.style.display = 'block';
-              renderHelmetCanvases();
-              // Start image load timer and handlers
-              window._startImageTimer();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 400);
+          // If image loaded early, speed up the countdown
+          if (imageLoaded && secondsLeft > 3) secondsLeft = 3;
+
+          if (secondsLeft <= 0) {
+            clearInterval(timer);
+            overlay.style.display = 'none';
+            content.style.display = 'block';
+            renderHelmetCanvases();
+
+            // If image still hasn't loaded, start the visible timer
+            if (!imageLoaded) window._startImageTimer();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }
-        }, 80);
+        }, 1000);
       }
     }
   };
