@@ -1040,19 +1040,17 @@
     });
     html += '</div>';
 
-    // AI Generated Concept — canvas-based placeholder + real image attempt
-    html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI Concept Render</h3>';
-    var sc = concepts[state.selectedConcept];
+    // Concept Render — canvas IS the deliverable
+    html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">Your Custom Helmet Concept</h3>';
+    var sc = concepts[state.selectedConcept] || concepts[0];
     html += '<div id="aiImageContainer" style="text-align:center;position:relative;">';
-    html += '<canvas id="conceptCanvas" width="500" height="500" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);filter:blur(3px);transition:filter 2s ease;"></canvas>';
-    html += '<img id="aiImg" style="position:absolute;inset:0;max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;width:100%;height:100%;object-fit:cover;" alt="AI Helmet Render">';
-    html += '<div id="conceptOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(0,0,0,0.3);transition:opacity 1s;"><div style="text-align:center;"><div style="font-size:1.8rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);font-weight:600;margin-top:6px;">Rendering concept...</div><div id="aiTimer" style="font-size:1.8rem;color:white;font-family:Oswald,sans-serif;margin-top:4px;">0s</div></div></div>';
+    html += '<canvas id="conceptCanvas" width="600" height="600" style="max-width:100%;border-radius:16px;border:3px solid var(--gold);filter:blur(6px);transition:filter 1.5s ease;box-shadow:0 8px 40px rgba(212,168,67,0.2);"></canvas>';
     html += '</div>';
-    html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — hand-painted result will be even better.</div>';
-    html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
-    html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
-    html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
-    html += '</div>';
+    html += '<div style="margin-top:14px;font-size:0.88rem;color:var(--gold);font-weight:600;">Concept: ' + sc.title + '</div>';
+    html += '<div style="font-size:0.8rem;color:var(--gray);margin-top:4px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.5;">' + sc.desc + '</div>';
+    html += '<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
+    html += '<button class="nav-btn next" style="font-size:0.82rem;padding:10px 22px;" onclick="window._regenerateAI()">Regenerate Design</button>';
+    html += '<button class="nav-btn prev" style="font-size:0.82rem;padding:10px 22px;" onclick="window._regenerateAI(\'different\')">Try Different Concept</button>';
     html += '</div>';
 
     // Encouragement
@@ -1446,30 +1444,8 @@
       state.selectedConcept = (state.selectedConcept + 1) % 3;
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
-
-    // Rebuild the concept canvas with new colors/effects
-    var aiImg = document.getElementById('aiImg');
-    var canvas = document.getElementById('conceptCanvas');
-    var overlay = document.getElementById('conceptOverlay');
-    if (aiImg) { aiImg.style.display = 'none'; }
-    if (canvas) { canvas.style.display = 'block'; canvas.style.filter = 'blur(8px)'; }
-    if (overlay) { overlay.style.display = 'flex'; overlay.style.opacity = '1'; overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:1.8rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);font-weight:600;margin-top:6px;">Regenerating...</div><div id="aiTimer" style="font-size:1.8rem;color:white;font-family:Oswald,sans-serif;margin-top:4px;">0s</div></div>'; }
-
-    // Update the preload URL
-    var urlEl = document.getElementById('preloadUrl');
-    if (urlEl) {
-      var cpts = generateConcepts('','','','');
-      var dir = cpts[state.selectedConcept];
-      var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
-      var styleName = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(', ') || 'custom';
-      var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(', ');
-      var fn = FINISHES.find(function(f){ return f.id === state.finish; });
-      var shortP = 'Custom painted ' + (state.brand || 'racing') + ' ' + (tn ? tn.label : '') + ' helmet, ' + styleName + ', ' + (dir ? dir.desc.substring(0, 100) : '') + ', colors ' + (cn || 'bold') + ', ' + (fn ? fn.label : 'gloss') + ', product photo, white background, photorealistic';
-      urlEl.value = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortP) + '?width=768&height=768&nologo=true&seed=' + state.aiSeed;
-    }
-
+    // Just redraw the canvas concept
     window._drawConceptPlaceholder();
-    window._tryLoadRealImage();
   };
 
   window._restart = function() {
@@ -1789,34 +1765,35 @@
         overlay.style.display = 'block';
         content.style.display = 'none';
 
-        var totalSeconds = 30;
+        var totalSeconds = 22;
         var secondsLeft = totalSeconds;
         var messages = [
-          { at: 29, text: 'Steve just cracked his knuckles...' },
-          { at: 27, text: 'Shaking the spray cans... pssshhh pssshhh' },
-          { at: 25, text: 'Taping off your pin lines with surgical precision...' },
-          { at: 23, text: 'Arguing with the airbrush about color theory...' },
-          { at: 21, text: 'The airbrush lost. Steve always wins.' },
-          { at: 19, text: 'Laying down base coat... don\'t breathe on it.' },
-          { at: 17, text: 'Adding your colors — this is where the magic happens' },
-          { at: 15, text: 'Halfway there... unlike that one customer\'s "quick project"' },
-          { at: 13, text: 'Pin lines going down smoother than a Sunday ride' },
-          { at: 11, text: 'Steve just said "oh that\'s nice" out loud. Good sign.' },
-          { at: 9, text: 'Clear coat warming up... almost showtime' },
-          { at: 7, text: 'Checking every angle. Then checking again. That\'s the Steve way.' },
-          { at: 5, text: 'Final details... the part where good becomes ridiculous' },
-          { at: 3, text: 'Blowing off the dust, stepping back, nodding slowly...' },
-          { at: 1, text: 'Chef\'s kiss. It\'s ready.' }
+          { at: 22, text: 'Steve just cracked his knuckles...' },
+          { at: 20, text: 'Shaking the spray cans... pssshhh pssshhh' },
+          { at: 18, text: 'Taping off your pin lines with surgical precision...' },
+          { at: 16, text: 'Arguing with the airbrush about color theory...' },
+          { at: 14, text: 'Laying down base coat... don\'t breathe on it.' },
+          { at: 12, text: 'Adding your colors — this is where the magic happens' },
+          { at: 10, text: 'Pin lines going down smoother than a Sunday ride' },
+          { at: 8, text: 'Steve just said "oh that\'s nice" out loud. Good sign.' },
+          { at: 6, text: 'Checking every angle. Then checking again. That\'s the Steve way.' },
+          { at: 4, text: 'Final details... the part where good becomes ridiculous' },
+          { at: 2, text: 'Chef\'s kiss. It\'s ready.' }
         ];
+        var currentMsg = '';
 
         var timer = setInterval(function() {
           secondsLeft--;
           if (countdown) countdown.textContent = Math.max(secondsLeft, 0);
           if (bar) bar.style.width = (((totalSeconds - secondsLeft) / totalSeconds) * 100) + '%';
 
-          messages.forEach(function(m) {
-            if (secondsLeft <= m.at && statusEl && statusEl.textContent !== m.text) statusEl.textContent = m.text;
-          });
+          for (var mi = 0; mi < messages.length; mi++) {
+            if (secondsLeft <= messages[mi].at && messages[mi].text !== currentMsg) {
+              currentMsg = messages[mi].text;
+              if (statusEl) statusEl.textContent = currentMsg;
+              break;
+            }
+          }
 
           if (secondsLeft <= 0) {
             clearInterval(timer);
@@ -1824,10 +1801,9 @@
             content.style.display = 'block';
             renderHelmetCanvases();
 
-            // Draw blurred canvas placeholder and try loading real image
+            // Draw the concept render
             requestAnimationFrame(function() {
               window._drawConceptPlaceholder();
-              window._tryLoadRealImage();
             });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1846,90 +1822,156 @@
     var canvas = document.getElementById('conceptCanvas');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
-    var W = 500, H = 500;
+    var W = 600, H = 600;
     ctx.clearRect(0, 0, W, H);
 
-    // Background gradient
-    var bg = ctx.createRadialGradient(250, 220, 50, 250, 250, 350);
-    bg.addColorStop(0, '#333');
-    bg.addColorStop(1, '#111');
+    var c1 = state.colors[0] || '#e63946';
+    var c2 = state.colors[1] || '#1d3557';
+    var c3 = state.colors[2] || state.colors[0] || '#333';
+    var c4 = state.colors[3] || state.colors[1] || '#222';
+
+    // Studio background
+    var bg = ctx.createRadialGradient(300, 280, 80, 300, 300, 400);
+    bg.addColorStop(0, '#2a2a2a');
+    bg.addColorStop(1, '#0f0f0f');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // Helmet shell path
+    // Floor reflection
+    var floor = ctx.createLinearGradient(0, 480, 0, 600);
+    floor.addColorStop(0, 'rgba(255,255,255,0.03)');
+    floor.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, 480, W, 120);
+
+    // Shadow under helmet
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(300, 520, 160, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Helmet shell — 3/4 front view
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(250, 40);
-    ctx.bezierCurveTo(400, 40, 450, 150, 450, 250);
-    ctx.bezierCurveTo(450, 370, 400, 430, 350, 450);
-    ctx.lineTo(150, 450);
-    ctx.bezierCurveTo(100, 430, 50, 370, 50, 250);
-    ctx.bezierCurveTo(50, 150, 100, 40, 250, 40);
+    ctx.moveTo(300, 55);
+    ctx.bezierCurveTo(460, 55, 510, 170, 510, 280);
+    ctx.bezierCurveTo(510, 400, 460, 480, 400, 505);
+    ctx.lineTo(200, 505);
+    ctx.bezierCurveTo(140, 480, 90, 400, 90, 280);
+    ctx.bezierCurveTo(90, 170, 140, 55, 300, 55);
     ctx.closePath();
     ctx.clip();
 
-    // Fill zones with user's colors
-    var c1 = getZoneColor('crown', state.colors[0] || '#444');
-    var c2 = getZoneColor('forehead', state.colors[1] || state.colors[0] || '#333');
-    var c3 = getZoneColor('left-temple', state.colors[0] || '#555');
-    var c4 = getZoneColor('right-temple', state.colors[1] || state.colors[0] || '#555');
-    var c5 = getZoneColor('chin', state.colors[2] || state.colors[0] || '#222');
+    // Base coat — sweeping gradient
+    var base = ctx.createLinearGradient(90, 55, 510, 505);
+    base.addColorStop(0, c1);
+    base.addColorStop(0.4, c2);
+    base.addColorStop(0.7, c1);
+    base.addColorStop(1, c3);
+    ctx.fillStyle = base;
+    ctx.fillRect(80, 50, 440, 470);
 
-    // Crown
-    var grad1 = ctx.createLinearGradient(50, 40, 450, 40);
-    grad1.addColorStop(0, c3); grad1.addColorStop(0.5, c1); grad1.addColorStop(1, c4);
-    ctx.fillStyle = grad1;
-    ctx.fillRect(50, 30, 400, 130);
+    // Zone-based color blocks
+    var zCrown = getZoneColor('crown', c1);
+    var zFore = getZoneColor('forehead', c2);
+    var zLeft = getZoneColor('left-temple', c1);
+    var zRight = getZoneColor('right-temple', c2);
+    var zChin = getZoneColor('chin', c3);
+    var zCenter = getZoneColor('center', c4);
 
-    // Middle
-    var grad2 = ctx.createLinearGradient(0, 160, 0, 300);
-    grad2.addColorStop(0, c2); grad2.addColorStop(1, c5);
-    ctx.fillStyle = grad2;
-    ctx.fillRect(50, 150, 400, 160);
+    // Crown section
+    var crownG = ctx.createLinearGradient(150, 50, 450, 50);
+    crownG.addColorStop(0, zLeft); crownG.addColorStop(0.5, zCrown); crownG.addColorStop(1, zRight);
+    ctx.fillStyle = crownG;
+    ctx.fillRect(80, 50, 440, 120);
 
-    // Sides
-    ctx.fillStyle = c3;
-    ctx.fillRect(50, 150, 120, 200);
-    ctx.fillStyle = c4;
-    ctx.fillRect(330, 150, 120, 200);
+    // Mid sections
+    ctx.fillStyle = zLeft;
+    ctx.fillRect(80, 170, 150, 180);
+    ctx.fillStyle = zCenter;
+    ctx.fillRect(230, 170, 140, 180);
+    ctx.fillStyle = zRight;
+    ctx.fillRect(370, 170, 150, 180);
 
-    // Chin
-    ctx.fillStyle = c5;
-    ctx.fillRect(50, 310, 400, 140);
+    // Chin bar
+    ctx.fillStyle = zChin;
+    ctx.fillRect(80, 380, 440, 130);
+
+    // Racing stripes
+    if (state.styles.indexOf('racing') >= 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(270, 50, 60, 460);
+      ctx.fillStyle = c2;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(260, 50, 10, 460);
+      ctx.fillRect(330, 50, 10, 460);
+      ctx.globalAlpha = 1;
+    }
+
+    // Tribal flames
+    if (state.styles.indexOf('tribal') >= 0) {
+      ctx.fillStyle = 'rgba(255,140,0,0.25)';
+      for (var fi = 0; fi < 10; fi++) {
+        var fx = 100 + fi * 42;
+        ctx.beginPath();
+        ctx.moveTo(fx, 480);
+        ctx.quadraticCurveTo(fx + 8, 340, fx + 4, 180 + Math.random() * 60);
+        ctx.quadraticCurveTo(fx + 18, 360, fx + 18, 480);
+        ctx.fill();
+      }
+    }
+
+    // Geometric
+    if (state.styles.indexOf('geometric') >= 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      for (var gi = 0; gi < 12; gi++) {
+        var gx = 120 + gi * 32; var gy = 100 + (gi % 3) * 80;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + 40, gy + 25); ctx.lineTo(gx + 20, gy + 60); ctx.closePath(); ctx.stroke();
+      }
+    }
+
+    // Gradient fade
+    if (state.styles.indexOf('gradient') >= 0) {
+      var fadeG = ctx.createLinearGradient(80, 50, 80, 505);
+      fadeG.addColorStop(0, 'rgba(255,255,255,0.15)');
+      fadeG.addColorStop(0.5, 'rgba(0,0,0,0)');
+      fadeG.addColorStop(1, 'rgba(0,0,0,0.2)');
+      ctx.fillStyle = fadeG;
+      ctx.fillRect(80, 50, 440, 460);
+    }
 
     // Pin lines
     if (state.pinLine === 'standard') {
       ctx.strokeStyle = state.pinLineColor || '#000';
-      ctx.lineWidth = 2;
-      [150, 310].forEach(function(y) {
-        ctx.beginPath(); ctx.moveTo(60, y); ctx.lineTo(440, y); ctx.stroke();
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 2;
+      [170, 350].forEach(function(y) {
+        ctx.beginPath(); ctx.moveTo(100, y); ctx.lineTo(500, y); ctx.stroke();
       });
-      [170, 330].forEach(function(x) {
-        ctx.beginPath(); ctx.moveTo(x, 150); ctx.lineTo(x, 400); ctx.stroke();
+      [230, 370].forEach(function(x) {
+        ctx.beginPath(); ctx.moveTo(x, 170); ctx.lineTo(x, 450); ctx.stroke();
       });
+      ctx.shadowBlur = 0;
     }
 
-    // Racing stripes if selected
-    if (state.styles.indexOf('racing') >= 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(220, 30, 60, 420);
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(210, 30, 10, 420);
-      ctx.fillRect(280, 30, 10, 420);
-    }
+    // Highlight / gloss reflection
+    var sheen = ctx.createLinearGradient(150, 60, 400, 300);
+    sheen.addColorStop(0, 'rgba(255,255,255,0.25)');
+    sheen.addColorStop(0.3, 'rgba(255,255,255,0.05)');
+    sheen.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sheen;
+    ctx.fillRect(80, 50, 440, 460);
 
-    // Flame hints if selected
-    if (state.styles.indexOf('tribal') >= 0) {
-      ctx.fillStyle = 'rgba(255,120,0,0.2)';
-      for (var fi = 0; fi < 8; fi++) {
-        var fx = 80 + fi * 45;
-        ctx.beginPath();
-        ctx.moveTo(fx, 400);
-        ctx.quadraticCurveTo(fx + 10, 280, fx + 5, 180);
-        ctx.quadraticCurveTo(fx + 20, 300, fx + 20, 400);
-        ctx.fill();
-      }
-    }
+    // Edge lighting (right side)
+    var edge = ctx.createLinearGradient(450, 100, 510, 100);
+    edge.addColorStop(0, 'rgba(255,255,255,0)');
+    edge.addColorStop(1, 'rgba(255,255,255,0.12)');
+    ctx.fillStyle = edge;
+    ctx.fillRect(450, 50, 60, 460);
 
     ctx.restore();
 
@@ -1937,65 +1979,77 @@
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
-    ctx.ellipse(250, 220, 150, 40, 0, 0, Math.PI * 2);
+    ctx.ellipse(300, 255, 170, 50, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Visor tint
-    ctx.fillStyle = 'rgba(40,40,60,0.7)';
+    // Visor tint with reflection
+    var visorG = ctx.createLinearGradient(130, 210, 470, 300);
+    visorG.addColorStop(0, 'rgba(30,30,50,0.85)');
+    visorG.addColorStop(0.4, 'rgba(60,60,100,0.6)');
+    visorG.addColorStop(1, 'rgba(20,20,40,0.9)');
+    ctx.fillStyle = visorG;
     ctx.beginPath();
-    ctx.ellipse(250, 220, 150, 40, 0, 0, Math.PI * 2);
+    ctx.ellipse(300, 255, 170, 50, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Shell outline
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 3;
+    // Visor glare
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.moveTo(250, 40);
-    ctx.bezierCurveTo(400, 40, 450, 150, 450, 250);
-    ctx.bezierCurveTo(450, 370, 400, 430, 350, 450);
-    ctx.lineTo(150, 450);
-    ctx.bezierCurveTo(100, 430, 50, 370, 50, 250);
-    ctx.bezierCurveTo(50, 150, 100, 40, 250, 40);
+    ctx.ellipse(240, 240, 80, 20, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shell outline with glow
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(300, 55);
+    ctx.bezierCurveTo(460, 55, 510, 170, 510, 280);
+    ctx.bezierCurveTo(510, 400, 460, 480, 400, 505);
+    ctx.lineTo(200, 505);
+    ctx.bezierCurveTo(140, 480, 90, 400, 90, 280);
+    ctx.bezierCurveTo(90, 170, 140, 55, 300, 55);
     ctx.closePath();
     ctx.stroke();
 
     // Number
     if (state.number) {
-      ctx.font = 'bold 60px Oswald, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.save();
+      ctx.font = 'bold 72px Oswald, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.textAlign = 'center';
-      ctx.fillText(state.number, 250, 130);
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 6;
+      ctx.fillText(state.number, 300, 155);
+      ctx.restore();
     }
 
-    // Brand text
+    // Brand
     if (state.brand) {
-      ctx.font = 'bold 18px Oswald, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.save();
+      ctx.font = 'bold 22px Oswald, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
       ctx.textAlign = 'center';
-      ctx.fillText(state.brand.toUpperCase(), 250, 80);
+      ctx.letterSpacing = '3px';
+      ctx.fillText(state.brand.toUpperCase(), 300, 95);
+      ctx.restore();
     }
 
-    // "Concept Preview" label
-    ctx.font = '12px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    // DB Customs watermark
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(212,168,67,0.3)';
     ctx.textAlign = 'center';
-    ctx.fillText('CONCEPT PREVIEW — DB CUSTOMS', 250, 485);
+    ctx.fillText('DB CUSTOMS — CONCEPT RENDER', 300, 565);
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillText('Hand-painted by Steve Braus — dbcustoms.com', 300, 582);
 
-    // Animate: slowly unblur the canvas over 5 seconds
-    canvas.style.filter = 'blur(8px)';
-    var blurSteps = [6, 4, 3, 2, 1, 0];
-    blurSteps.forEach(function(b, i) {
-      setTimeout(function() {
-        canvas.style.filter = 'blur(' + b + 'px)';
-      }, (i + 1) * 800);
+    // Animate: blur to sharp over 4 seconds
+    canvas.style.filter = 'blur(6px)';
+    var blurs = [5, 4, 3, 2, 1, 0];
+    blurs.forEach(function(b, i) {
+      setTimeout(function() { canvas.style.filter = 'blur(' + b + 'px)'; }, (i + 1) * 600);
     });
-
-    // After full unblur, remove the overlay
-    setTimeout(function() {
-      var overlay = document.getElementById('conceptOverlay');
-      if (overlay) { overlay.style.opacity = '0'; setTimeout(function() { overlay.style.display = 'none'; }, 1000); }
-    }, 5500);
   };
 
   // Try loading real AI image in background — if it loads, swap it in
