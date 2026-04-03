@@ -1033,16 +1033,15 @@
     });
     html += '</div>';
 
-    // AI Generated Image
-    html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI-Generated Concept Render</h3>';
-    html += '<p style="font-size:0.82rem;color:var(--gray);margin-bottom:12px;">Select a concept direction above to generate an AI visualization of your helmet design.</p>';
-    html += '<div id="aiImageContainer" style="text-align:center;">';
+    // AI Generated Concept — canvas-based placeholder + real image attempt
+    html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI Concept Render</h3>';
     var sc = concepts[state.selectedConcept];
-    html += '<div id="geminiRender" style="text-align:center;">';
-    html += '<img id="aiImg" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;" alt="Custom Helmet Render">';
-    html += '<div id="aiSpinner" style="padding:40px 20px;text-align:center;background:var(--dark2);border-radius:12px;min-height:200px;display:flex;align-items:center;justify-content:center;"><div><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.85rem;color:var(--gold);margin-top:8px;">Waiting for AI render...</div><div id="aiTimer" style="font-size:1.5rem;color:var(--white);margin-top:4px;font-family:Oswald,sans-serif;"></div></div></div>';
+    html += '<div id="aiImageContainer" style="text-align:center;position:relative;">';
+    html += '<canvas id="conceptCanvas" width="500" height="500" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);filter:blur(3px);transition:filter 2s ease;"></canvas>';
+    html += '<img id="aiImg" style="position:absolute;inset:0;max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;width:100%;height:100%;object-fit:cover;" alt="AI Helmet Render">';
+    html += '<div id="conceptOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(0,0,0,0.3);transition:opacity 1s;"><div style="text-align:center;"><div style="font-size:1.8rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);font-weight:600;margin-top:6px;">Rendering concept...</div><div id="aiTimer" style="font-size:1.8rem;color:white;font-family:Oswald,sans-serif;margin-top:4px;">0s</div></div></div>';
     html += '</div>';
-    html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — AI visualization. Actual hand-painted result will be even better.</div>';
+    html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — hand-painted result will be even better.</div>';
     html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
     html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
     html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
@@ -1441,24 +1440,29 @@
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
 
-    // Quick swap — update the image src directly without full re-render
-    var imgEl = document.getElementById('aiImg');
-    var spinnerEl = document.getElementById('aiSpinner');
-    if (imgEl && spinnerEl) {
+    // Rebuild the concept canvas with new colors/effects
+    var aiImg = document.getElementById('aiImg');
+    var canvas = document.getElementById('conceptCanvas');
+    var overlay = document.getElementById('conceptOverlay');
+    if (aiImg) { aiImg.style.display = 'none'; }
+    if (canvas) { canvas.style.display = 'block'; canvas.style.filter = 'blur(8px)'; }
+    if (overlay) { overlay.style.display = 'flex'; overlay.style.opacity = '1'; overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:1.8rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);font-weight:600;margin-top:6px;">Regenerating...</div><div id="aiTimer" style="font-size:1.8rem;color:white;font-family:Oswald,sans-serif;margin-top:4px;">0s</div></div>'; }
+
+    // Update the preload URL
+    var urlEl = document.getElementById('preloadUrl');
+    if (urlEl) {
       var cpts = generateConcepts('','','','');
       var dir = cpts[state.selectedConcept];
       var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+      var styleName = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(', ') || 'custom';
       var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(', ');
       var fn = FINISHES.find(function(f){ return f.id === state.finish; });
-      var shortP = 'Custom painted ' + (state.brand || 'racing') + ' ' + (tn ? tn.label : '') + ' helmet, ' + (dir ? dir.desc : 'custom design') + ', colors ' + (cn || 'bold') + ', ' + (fn ? fn.label : 'gloss') + ' finish, product photo, studio lighting, white background, photorealistic';
-      imgEl.style.display = 'none';
-      spinnerEl.style.display = 'flex';
-      spinnerEl.innerHTML = '<div><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);margin-top:12px;font-weight:600;">Regenerating...</div><div id="aiTimer" style="font-size:2rem;color:var(--white);margin-top:8px;font-family:Oswald,sans-serif;">0s</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">New render in progress</div><div id="aiRetryMsg" style="font-size:0.78rem;color:var(--red);margin-top:10px;display:none;">Taking longer than expected</div></div>';
-      imgEl.src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortP) + '?width=768&height=768&nologo=true&seed=' + state.aiSeed;
-      window._startImageTimer();
-    } else {
-      render();
+      var shortP = 'Custom painted ' + (state.brand || 'racing') + ' ' + (tn ? tn.label : '') + ' helmet, ' + styleName + ', ' + (dir ? dir.desc.substring(0, 100) : '') + ', colors ' + (cn || 'bold') + ', ' + (fn ? fn.label : 'gloss') + ', product photo, white background, photorealistic';
+      urlEl.value = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortP) + '?width=768&height=768&nologo=true&seed=' + state.aiSeed;
     }
+
+    window._drawConceptPlaceholder();
+    window._tryLoadRealImage();
   };
 
   window._restart = function() {
@@ -1813,44 +1817,10 @@
             content.style.display = 'block';
             renderHelmetCanvases();
 
-            // Give DOM one frame to paint, then set image src and start timer
+            // Draw blurred canvas placeholder and try loading real image
             requestAnimationFrame(function() {
-              var aiImg = document.getElementById('aiImg');
-              var urlEl = document.getElementById('preloadUrl');
-              var spinnerEl = document.getElementById('aiSpinner');
-              var timerEl = document.getElementById('aiTimer');
-
-              if (aiImg && urlEl && urlEl.value) {
-                var imgUrl = urlEl.value;
-
-                // Set up load/error handlers BEFORE setting src
-                aiImg.onload = function() {
-                  aiImg.style.display = 'block';
-                  if (spinnerEl) spinnerEl.style.display = 'none';
-                  if (_imgTimer) clearInterval(_imgTimer);
-                };
-                aiImg.onerror = function() {
-                  if (timerEl) timerEl.textContent = 'Retrying...';
-                  setTimeout(function() {
-                    aiImg.src = imgUrl + '&retry=' + Date.now();
-                  }, 3000);
-                };
-
-                // Start countdown timer
-                var secs = 0;
-                if (_imgTimer) clearInterval(_imgTimer);
-                _imgTimer = setInterval(function() {
-                  secs++;
-                  if (timerEl) timerEl.textContent = secs + 's';
-                  if (secs >= 60) {
-                    clearInterval(_imgTimer);
-                    if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Render timed out — click <strong style="color:var(--red);">Regenerate</strong></div>';
-                  }
-                }, 1000);
-
-                // Now set the src to kick off loading
-                aiImg.src = imgUrl;
-              }
+              window._drawConceptPlaceholder();
+              window._tryLoadRealImage();
             });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1861,47 +1831,211 @@
   };
 
   // ================================================================
-  // IMAGE LOAD TIMER
+  // CANVAS CONCEPT PLACEHOLDER — draws a stylized helmet with user's colors
   // ================================================================
   var _imgTimer = null;
-  window._startImageTimer = function() {
-    if (_imgTimer) clearInterval(_imgTimer);
-    var seconds = 0;
-    var imgEl = document.getElementById('aiImg');
+
+  window._drawConceptPlaceholder = function() {
+    var canvas = document.getElementById('conceptCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = 500, H = 500;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background gradient
+    var bg = ctx.createRadialGradient(250, 220, 50, 250, 250, 350);
+    bg.addColorStop(0, '#333');
+    bg.addColorStop(1, '#111');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Helmet shell path
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(250, 40);
+    ctx.bezierCurveTo(400, 40, 450, 150, 450, 250);
+    ctx.bezierCurveTo(450, 370, 400, 430, 350, 450);
+    ctx.lineTo(150, 450);
+    ctx.bezierCurveTo(100, 430, 50, 370, 50, 250);
+    ctx.bezierCurveTo(50, 150, 100, 40, 250, 40);
+    ctx.closePath();
+    ctx.clip();
+
+    // Fill zones with user's colors
+    var c1 = getZoneColor('crown', state.colors[0] || '#444');
+    var c2 = getZoneColor('forehead', state.colors[1] || state.colors[0] || '#333');
+    var c3 = getZoneColor('left-temple', state.colors[0] || '#555');
+    var c4 = getZoneColor('right-temple', state.colors[1] || state.colors[0] || '#555');
+    var c5 = getZoneColor('chin', state.colors[2] || state.colors[0] || '#222');
+
+    // Crown
+    var grad1 = ctx.createLinearGradient(50, 40, 450, 40);
+    grad1.addColorStop(0, c3); grad1.addColorStop(0.5, c1); grad1.addColorStop(1, c4);
+    ctx.fillStyle = grad1;
+    ctx.fillRect(50, 30, 400, 130);
+
+    // Middle
+    var grad2 = ctx.createLinearGradient(0, 160, 0, 300);
+    grad2.addColorStop(0, c2); grad2.addColorStop(1, c5);
+    ctx.fillStyle = grad2;
+    ctx.fillRect(50, 150, 400, 160);
+
+    // Sides
+    ctx.fillStyle = c3;
+    ctx.fillRect(50, 150, 120, 200);
+    ctx.fillStyle = c4;
+    ctx.fillRect(330, 150, 120, 200);
+
+    // Chin
+    ctx.fillStyle = c5;
+    ctx.fillRect(50, 310, 400, 140);
+
+    // Pin lines
+    if (state.pinLine === 'standard') {
+      ctx.strokeStyle = state.pinLineColor || '#000';
+      ctx.lineWidth = 2;
+      [150, 310].forEach(function(y) {
+        ctx.beginPath(); ctx.moveTo(60, y); ctx.lineTo(440, y); ctx.stroke();
+      });
+      [170, 330].forEach(function(x) {
+        ctx.beginPath(); ctx.moveTo(x, 150); ctx.lineTo(x, 400); ctx.stroke();
+      });
+    }
+
+    // Racing stripes if selected
+    if (state.styles.indexOf('racing') >= 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(220, 30, 60, 420);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(210, 30, 10, 420);
+      ctx.fillRect(280, 30, 10, 420);
+    }
+
+    // Flame hints if selected
+    if (state.styles.indexOf('tribal') >= 0) {
+      ctx.fillStyle = 'rgba(255,120,0,0.2)';
+      for (var fi = 0; fi < 8; fi++) {
+        var fx = 80 + fi * 45;
+        ctx.beginPath();
+        ctx.moveTo(fx, 400);
+        ctx.quadraticCurveTo(fx + 10, 280, fx + 5, 180);
+        ctx.quadraticCurveTo(fx + 20, 300, fx + 20, 400);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+
+    // Visor cutout
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.ellipse(250, 220, 150, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Visor tint
+    ctx.fillStyle = 'rgba(40,40,60,0.7)';
+    ctx.beginPath();
+    ctx.ellipse(250, 220, 150, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shell outline
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(250, 40);
+    ctx.bezierCurveTo(400, 40, 450, 150, 450, 250);
+    ctx.bezierCurveTo(450, 370, 400, 430, 350, 450);
+    ctx.lineTo(150, 450);
+    ctx.bezierCurveTo(100, 430, 50, 370, 50, 250);
+    ctx.bezierCurveTo(50, 150, 100, 40, 250, 40);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Number
+    if (state.number) {
+      ctx.font = 'bold 60px Oswald, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.textAlign = 'center';
+      ctx.fillText(state.number, 250, 130);
+    }
+
+    // Brand text
+    if (state.brand) {
+      ctx.font = 'bold 18px Oswald, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.textAlign = 'center';
+      ctx.fillText(state.brand.toUpperCase(), 250, 80);
+    }
+
+    // "Concept Preview" label
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.textAlign = 'center';
+    ctx.fillText('CONCEPT PREVIEW — DB CUSTOMS', 250, 485);
+
+    // Animate: slowly unblur the canvas over 5 seconds
+    canvas.style.filter = 'blur(8px)';
+    var blurSteps = [6, 4, 3, 2, 1, 0];
+    blurSteps.forEach(function(b, i) {
+      setTimeout(function() {
+        canvas.style.filter = 'blur(' + b + 'px)';
+      }, (i + 1) * 800);
+    });
+
+    // After full unblur, remove the overlay
+    setTimeout(function() {
+      var overlay = document.getElementById('conceptOverlay');
+      if (overlay) { overlay.style.opacity = '0'; setTimeout(function() { overlay.style.display = 'none'; }, 1000); }
+    }, 5500);
+  };
+
+  // Try loading real AI image in background — if it loads, swap it in
+  window._tryLoadRealImage = function() {
+    var urlEl = document.getElementById('preloadUrl');
+    if (!urlEl || !urlEl.value) return;
+
     var timerEl = document.getElementById('aiTimer');
-    var spinnerEl = document.getElementById('aiSpinner');
-    var retryMsg = document.getElementById('aiRetryMsg');
-
-    if (!imgEl) return;
-
-    // Show image when loaded
-    imgEl.onload = function() {
-      if (_imgTimer) clearInterval(_imgTimer);
-      imgEl.style.display = 'block';
-      if (spinnerEl) spinnerEl.style.display = 'none';
-    };
-
-    imgEl.onerror = function() {
-      // Retry with a slightly different seed
-      if (seconds < 45) {
-        var src = imgEl.src;
-        imgEl.src = '';
-        setTimeout(function() { imgEl.src = src + '&retry=' + Date.now(); }, 2000);
-      } else {
-        if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Image generation timed out — click <strong>Regenerate</strong> to try again.</div>';
-        if (_imgTimer) clearInterval(_imgTimer);
-      }
-    };
-
+    var secs = 0;
+    if (_imgTimer) clearInterval(_imgTimer);
     _imgTimer = setInterval(function() {
-      seconds++;
-      if (timerEl) timerEl.textContent = seconds + 's';
-      if (seconds >= 20 && retryMsg) retryMsg.style.display = 'block';
-      if (seconds >= 60) {
-        clearInterval(_imgTimer);
-        if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Render timed out after 60s — click <strong>Regenerate</strong> to try again with a fresh prompt.</div>';
-      }
+      secs++;
+      if (timerEl) timerEl.textContent = secs + 's';
     }, 1000);
+
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      if (_imgTimer) clearInterval(_imgTimer);
+      var aiImg = document.getElementById('aiImg');
+      var canvas = document.getElementById('conceptCanvas');
+      var overlay = document.getElementById('conceptOverlay');
+      if (aiImg) {
+        aiImg.src = img.src;
+        aiImg.style.display = 'block';
+        if (canvas) canvas.style.display = 'none';
+        if (overlay) { overlay.style.opacity = '0'; setTimeout(function() { overlay.style.display = 'none'; }, 500); }
+      }
+    };
+    img.onerror = function() {
+      // Real image failed — canvas placeholder stays. That's fine.
+      if (_imgTimer) clearInterval(_imgTimer);
+      var overlay = document.getElementById('conceptOverlay');
+      if (overlay) overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:0.85rem;color:var(--gold);font-weight:600;">Concept Preview</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">Generated from your design selections</div></div>';
+    };
+
+    // Set timeout — if no response in 30s, give up on real image
+    setTimeout(function() {
+      if (!img.complete || img.naturalWidth === 0) {
+        img.src = ''; // abort
+        if (_imgTimer) clearInterval(_imgTimer);
+        var overlay = document.getElementById('conceptOverlay');
+        if (overlay) overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:0.85rem;color:var(--gold);font-weight:600;">Concept Preview</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">Generated from your design selections</div></div>';
+      }
+    }, 30000);
+
+    img.src = urlEl.value;
   };
 
   // ================================================================
