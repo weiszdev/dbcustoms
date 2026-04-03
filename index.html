@@ -955,11 +955,12 @@
       return found ? found.name : c;
     }).join(', ');
 
-    var finishName = FINISHES.find(function(f){ return f.id === state.finish; });
-    finishName = finishName ? finishName.label : 'TBD';
+    var finishObj = FINISHES.find(function(f){ return f.id === state.finish; });
+    var finishName = finishObj ? finishObj.label : 'Gloss';
 
     var typeName = HELMET_TYPES.find(function(t){ return t.id === state.type; });
     typeName = typeName ? typeName.label : '';
+    var helmType = typeName || 'racing';
 
     // Generate concepts EARLY so they're available for the preload URL
     var concepts = generateConcepts(styleName, colorNames, finishName, typeName);
@@ -980,12 +981,16 @@
     html += '<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}</style>';
 
     // Store the image URL for use after countdown
-    var sc_pre = concepts[state.selectedConcept];
+    var sc_pre = concepts[state.selectedConcept] || concepts[0];
     var preloadSeed = state.aiSeed || (state.selectedConcept + 1);
-    var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ' design, ' + (colorNames || 'bold colors') + ', ' + finishName.toLowerCase() + ' finish';
+    var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet';
+    if (styleName) shortPrompt += ', ' + styleName.toLowerCase() + ' design';
+    if (colorNames) shortPrompt += ', colors ' + colorNames;
+    shortPrompt += ', ' + (finishName || 'gloss').toLowerCase() + ' finish';
     if (state.number) shortPrompt += ', number ' + state.number;
-    if (state.pinLine === 'standard') { var plc = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'black'; shortPrompt += ', thin ' + plc + ' pin lines at color transitions'; }
-    shortPrompt += ', ' + sc_pre.desc + ', professional product photo, studio lighting, white background, photorealistic';
+    if (state.pinLine === 'standard') { var plc = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'black'; shortPrompt += ', thin ' + plc + ' pin lines'; }
+    if (sc_pre && sc_pre.desc) shortPrompt += ', ' + sc_pre.desc.substring(0, 80);
+    shortPrompt += ', professional product photo, studio lighting, white background, photorealistic';
     html += '<input type="hidden" id="preloadUrl" value="https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt) + '?width=768&height=768&nologo=true&seed=' + preloadSeed + '">';
 
     // Content container — hidden until loading completes
