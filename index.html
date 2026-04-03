@@ -982,11 +982,17 @@
       var seed = state.aiSeed || (state.selectedConcept + 1);
       var fullPrompt = buildImagePrompt(sc.desc);
 
-      // Always render via Pollinations (works without billing) + try Gemini as upgrade
-      var encodedPrompt = encodeURIComponent(fullPrompt);
-      html += '<div id="geminiRender" style="position:relative;display:inline-block;max-width:100%;">';
-      html += '<img id="aiImg" src="https://image.pollinations.ai/prompt/' + encodedPrompt + '?width=768&height=768&nologo=true&seed=' + seed + '&model=flux" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);" alt="Custom Helmet Render" onload="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').innerHTML=\'Taking longer than expected — try Regenerate\'">';
-      html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Rendering your helmet...</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">This may take 10-20 seconds</div></div></div>';
+      // Render via Pollinations — short focused prompt for better results
+      var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ' design, ' + (colorNames || 'bold colors') + ', ' + finishName.toLowerCase() + ' finish';
+      if (state.number) shortPrompt += ', number ' + state.number;
+      shortPrompt += ', ' + sc.desc + ', professional product photo, studio lighting, white background, photorealistic, 4k';
+      var encodedPrompt = encodeURIComponent(shortPrompt);
+
+      html += '<div id="geminiRender" style="text-align:center;">';
+      html += '<div style="position:relative;display:inline-block;max-width:100%;min-height:300px;">';
+      html += '<img id="aiImg" crossorigin="anonymous" src="https://image.pollinations.ai/prompt/' + encodedPrompt + '?width=768&height=768&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);display:none;" alt="Custom Helmet Render">';
+      html += '<div id="aiSpinner" style="padding:60px 20px;text-align:center;background:var(--dark2);border-radius:12px;min-height:300px;display:flex;align-items:center;justify-content:center;"><div><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);margin-top:12px;font-weight:600;">Rendering your helmet design...</div><div id="aiTimer" style="font-size:2rem;color:var(--white);margin-top:8px;font-family:Oswald,sans-serif;">0s</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">AI renders typically take 15-30 seconds</div><div id="aiRetryMsg" style="font-size:0.78rem;color:var(--red);margin-top:10px;display:none;">Taking longer than expected — image is still generating</div></div></div>';
+      html += '</div>';
       html += '</div>';
       html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — ' + (GEMINI_KEY ? 'Nano Banana (Gemini)' : 'AI visualization') + '. Actual hand-painted result will be even better.</div>';
       html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
@@ -1350,12 +1356,18 @@
     // Quick swap — update the image src directly without full re-render
     var imgEl = document.getElementById('aiImg');
     var spinnerEl = document.getElementById('aiSpinner');
-    if (imgEl) {
+    if (imgEl && spinnerEl) {
       var cpts = generateConcepts('','','','');
       var dir = cpts[state.selectedConcept];
-      var prompt = encodeURIComponent(buildImagePrompt(dir ? dir.desc : ''));
-      if (spinnerEl) { spinnerEl.style.display = 'flex'; }
-      imgEl.src = 'https://image.pollinations.ai/prompt/' + prompt + '?width=768&height=768&nologo=true&seed=' + state.aiSeed + '&model=flux';
+      var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+      var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(', ');
+      var fn = FINISHES.find(function(f){ return f.id === state.finish; });
+      var shortP = 'Custom painted ' + (state.brand || 'racing') + ' ' + (tn ? tn.label : '') + ' helmet, ' + (dir ? dir.desc : 'custom design') + ', colors ' + (cn || 'bold') + ', ' + (fn ? fn.label : 'gloss') + ' finish, product photo, studio lighting, white background, photorealistic';
+      imgEl.style.display = 'none';
+      spinnerEl.style.display = 'flex';
+      spinnerEl.innerHTML = '<div><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.92rem;color:var(--gold);margin-top:12px;font-weight:600;">Regenerating...</div><div id="aiTimer" style="font-size:2rem;color:var(--white);margin-top:8px;font-family:Oswald,sans-serif;">0s</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">New render in progress</div><div id="aiRetryMsg" style="font-size:0.78rem;color:var(--red);margin-top:10px;display:none;">Taking longer than expected</div></div>';
+      imgEl.src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(shortP) + '?width=768&height=768&nologo=true&seed=' + state.aiSeed;
+      window._startImageTimer();
     } else {
       render();
     }
@@ -1704,13 +1716,58 @@
               overlay.style.display = 'none';
               content.style.display = 'block';
               renderHelmetCanvases();
-              // Image renders via Pollinations img src — no JS trigger needed
+              // Start image load timer and handlers
+              window._startImageTimer();
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 400);
           }
         }, 80);
       }
     }
+  };
+
+  // ================================================================
+  // IMAGE LOAD TIMER
+  // ================================================================
+  var _imgTimer = null;
+  window._startImageTimer = function() {
+    if (_imgTimer) clearInterval(_imgTimer);
+    var seconds = 0;
+    var imgEl = document.getElementById('aiImg');
+    var timerEl = document.getElementById('aiTimer');
+    var spinnerEl = document.getElementById('aiSpinner');
+    var retryMsg = document.getElementById('aiRetryMsg');
+
+    if (!imgEl) return;
+
+    // Show image when loaded
+    imgEl.onload = function() {
+      if (_imgTimer) clearInterval(_imgTimer);
+      imgEl.style.display = 'block';
+      if (spinnerEl) spinnerEl.style.display = 'none';
+    };
+
+    imgEl.onerror = function() {
+      // Retry with a slightly different seed
+      if (seconds < 45) {
+        var src = imgEl.src;
+        imgEl.src = '';
+        setTimeout(function() { imgEl.src = src + '&retry=' + Date.now(); }, 2000);
+      } else {
+        if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Image generation timed out — click <strong>Regenerate</strong> to try again.</div>';
+        if (_imgTimer) clearInterval(_imgTimer);
+      }
+    };
+
+    _imgTimer = setInterval(function() {
+      seconds++;
+      if (timerEl) timerEl.textContent = seconds + 's';
+      if (seconds >= 20 && retryMsg) retryMsg.style.display = 'block';
+      if (seconds >= 60) {
+        clearInterval(_imgTimer);
+        if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Render timed out after 60s — click <strong>Regenerate</strong> to try again with a fresh prompt.</div>';
+      }
+    }, 1000);
   };
 
   // ================================================================
