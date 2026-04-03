@@ -1418,6 +1418,26 @@
     return brief;
   }
 
+  // Build a single-line prompt optimized for FLUX image generation
+  window._buildFluxPrompt = function() {
+    var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+    var type = tn ? tn.label : 'racing';
+    var brand = state.brand || 'custom';
+    var colors = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(' and ') || 'bold colors';
+    var styles = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(' and ') || 'custom design';
+    var fn = FINISHES.find(function(f){ return f.id === state.finish; });
+    var finish = fn ? fn.label : 'gloss';
+
+    var p = 'Photorealistic product photo of a custom painted ' + brand + ' ' + type + ' helmet with ' + styles + ' design in ' + colors + ' with ' + finish + ' finish';
+    if (state.pinLine === 'standard') {
+      var plc = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'gold';
+      p += ' and thin ' + plc + ' pin stripe lines at color transitions';
+    }
+    if (state.number) p += ', number ' + state.number + ' on the side';
+    p += ', black background, studio lighting, professional product photography, highly detailed, 4k';
+    return p;
+  };
+
   // Together.ai FLUX image generation
   window._generateFluxImage = function(prompt, containerId) {
     var container = document.getElementById(containerId);
@@ -1468,17 +1488,16 @@
         if (badge) badge.style.display = 'none';
         if (status) status.textContent = 'AI render by FLUX.1 — Together.ai';
       } else if (data.error) {
-        console.log('[DB Customs] Together error:', data.error.message || JSON.stringify(data.error));
+        var errMsg = data.error.message || JSON.stringify(data.error);
+        console.log('[DB Customs] Together error:', errMsg);
         if (existingCanvas) existingCanvas.style.filter = 'blur(0px)';
-        if (badge) badge.style.display = 'none';
-        if (status) status.textContent = 'Render failed: ' + (data.error.message || 'Unknown error');
+        if (badge) { badge.style.display = 'flex'; badge.innerHTML = '<span style="color:var(--red);">Error: ' + errMsg.substring(0, 60) + '</span>'; }
       }
     })
     .catch(function(err) {
       console.log('[DB Customs] Fetch error:', err);
       if (existingCanvas) existingCanvas.style.filter = 'blur(0px)';
-      if (badge) badge.style.display = 'none';
-      if (status) status.textContent = 'Connection error — showing concept preview';
+      if (badge) { badge.style.display = 'flex'; badge.innerHTML = '<span style="color:var(--red);">Connection error</span>'; }
     });
   };
 
@@ -1519,7 +1538,7 @@
 
     // Try FLUX again
     if (TOGETHER_KEY) {
-      window._generateFluxImage(buildGeminiBrief(), 'aiImageContainer');
+      window._generateFluxImage(window._buildFluxPrompt(), 'aiImageContainer');
     }
   };
 
@@ -1880,8 +1899,7 @@
             requestAnimationFrame(function() {
               window._drawConceptPlaceholder();
               if (TOGETHER_KEY) {
-                var brief = buildGeminiBrief();
-                window._generateFluxImage(brief, 'aiImageContainer');
+                window._generateFluxImage(window._buildFluxPrompt(), 'aiImageContainer');
               }
             });
 
