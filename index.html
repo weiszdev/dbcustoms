@@ -1040,14 +1040,28 @@
     });
     html += '</div>';
 
-    // Concept Render — canvas IS the deliverable
+    // Concept Render — canvas first, Pollinations image loads on top
     html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">Your Custom Helmet Concept</h3>';
     var sc = concepts[state.selectedConcept] || concepts[0];
-    html += '<div id="aiImageContainer" style="text-align:center;position:relative;">';
+
+    // Build Pollinations prompt
+    var aiPrompt = 'Photorealistic custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ', ' + (colorNames || 'bold colors') + ', ' + (finishName || 'gloss') + ' finish';
+    if (state.number) aiPrompt += ', number ' + state.number;
+    aiPrompt += ', black background, studio lighting, product photography, 4k';
+    var aiSeed = state.aiSeed || (state.selectedConcept + 1);
+    var aiUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(aiPrompt) + '?width=768&height=768&nologo=true&seed=' + aiSeed;
+
+    html += '<div id="aiImageContainer" style="text-align:center;position:relative;min-height:400px;">';
+    // Canvas underneath
     html += '<canvas id="conceptCanvas" width="600" height="600" style="max-width:100%;border-radius:16px;border:3px solid var(--gold);filter:blur(6px);transition:filter 1.5s ease;box-shadow:0 8px 40px rgba(212,168,67,0.2);"></canvas>';
+    // AI image on top — hidden until loaded
+    html += '<img id="aiRealImg" src="' + aiUrl + '" style="position:absolute;top:0;left:50%;transform:translateX(-50%);max-width:100%;max-height:100%;border-radius:16px;border:3px solid var(--gold);display:none;box-shadow:0 8px 40px rgba(212,168,67,0.4);" alt="AI Helmet Render" onload="this.style.display=\'block\';var c=document.getElementById(\'conceptCanvas\');if(c)c.style.display=\'none\';var s=document.getElementById(\'renderStatus\');if(s)s.textContent=\'AI render loaded!\';var o=document.getElementById(\'aiLoadingBadge\');if(o)o.style.display=\'none\';" onerror="var s=document.getElementById(\'renderStatus\');if(s)s.textContent=\'AI render unavailable — showing concept preview\';">';
+    // Loading badge
+    html += '<div id="aiLoadingBadge" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.7);padding:6px 14px;border-radius:20px;font-size:0.72rem;color:var(--gold);font-weight:600;display:flex;align-items:center;gap:6px;"><span style="animation:pulse 1.5s infinite;">🎨</span> AI render loading...</div>';
     html += '</div>';
-    html += '<div style="margin-top:14px;font-size:0.88rem;color:var(--gold);font-weight:600;">Concept: ' + sc.title + '</div>';
-    html += '<div style="font-size:0.8rem;color:var(--gray);margin-top:4px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.5;">' + sc.desc + '</div>';
+    html += '<div id="renderStatus" style="margin-top:8px;font-size:0.72rem;color:var(--gray);min-height:16px;text-align:center;"></div>';
+    html += '<div style="margin-top:6px;font-size:0.88rem;color:var(--gold);font-weight:600;text-align:center;">Concept: ' + sc.title + '</div>';
+    html += '<div style="font-size:0.8rem;color:var(--gray);margin-top:4px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.5;text-align:center;">' + sc.desc + '</div>';
     html += '<div style="margin-top:14px;padding:16px;background:var(--dark2);border:1px solid var(--gold);border-radius:10px;text-align:center;">';
     html += '<div style="font-size:0.85rem;color:var(--gold);font-weight:600;margin-bottom:6px;">Want a photorealistic AI render?</div>';
     html += '<div style="font-size:0.78rem;color:var(--gray);margin-bottom:12px;">Click below to copy your design prompt, then paste it into Gemini for a life-like render.</div>';
@@ -1520,7 +1534,27 @@
       state.selectedConcept = (state.selectedConcept + 1) % 3;
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
+    // Redraw canvas
     window._drawConceptPlaceholder();
+    // Try new AI image
+    var aiImg = document.getElementById('aiRealImg');
+    var canvas = document.getElementById('conceptCanvas');
+    var badge = document.getElementById('aiLoadingBadge');
+    var status = document.getElementById('renderStatus');
+    if (aiImg) {
+      aiImg.style.display = 'none';
+      if (canvas) { canvas.style.display = 'block'; canvas.style.filter = 'blur(6px)'; }
+      if (badge) { badge.style.display = 'flex'; }
+      if (status) { status.textContent = ''; }
+      var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+      var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(', ');
+      var sn = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(', ');
+      var fn = FINISHES.find(function(f){ return f.id === state.finish; });
+      var p = 'Photorealistic custom painted ' + (state.brand || 'racing') + ' ' + (tn ? tn.label : '') + ' helmet, ' + sn + ', ' + cn + ', ' + (fn ? fn.label : 'gloss') + ' finish';
+      if (state.number) p += ', number ' + state.number;
+      p += ', black background, studio lighting, product photography, 4k';
+      aiImg.src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(p) + '?width=768&height=768&nologo=true&seed=' + state.aiSeed;
+    }
   };
 
   window._restart = function() {
