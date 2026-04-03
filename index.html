@@ -706,7 +706,7 @@
       html += '<div class="opt-card' + (state.type === t.id ? ' selected' : '') + '" data-val="' + t.id + '">';
       html += '<div class="opt-icon">' + t.icon + '</div><div class="opt-label">' + t.label + '</div><div class="opt-sub">' + t.sub + '</div></div>';
     });
-    html += '</div><div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div></div>';
     html += navHTML();
     return html;
   }
@@ -721,7 +721,7 @@
     });
     html += '</div>';
     html += '<div class="input-group"><label>Model Name / Number</label><input type="text" id="modelInput" placeholder="e.g. VX-Pro4, Star MIPS, X-Fifteen..." value="' + state.model + '"></div>';
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -754,7 +754,7 @@
     });
     html += '</div></div>';
 
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -831,7 +831,7 @@
 
     html += '</div>';
 
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -892,7 +892,7 @@
     html += '</div>';
     html += '</div>';
 
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -913,7 +913,7 @@
     html += '<div class="upload-zone" id="uploadZone"><div class="upload-icon">📸</div><p>Tap to upload reference images — helmets you like, design sketches, logos, color samples</p><input type="file" id="fileInput" multiple accept="image/*"></div>';
     html += '<div class="upload-previews" id="uploadPreviews"></div>';
 
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -935,7 +935,7 @@
       html += '<option' + (state.budget === b ? ' selected' : '') + '>' + b + '</option>';
     });
     html += '</select></div>';
-    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += '</div>';
     html += navHTML();
     return html;
   }
@@ -1283,13 +1283,7 @@
   }
 
   function showAI() {
-    setTimeout(function() {
-      var bubble = document.getElementById('aiBubble');
-      if (!bubble) return;
-      var msg = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
-      bubble.innerHTML = '<span class="ai-avatar">🎨</span><span class="ai-text"><strong>Steve\'s Studio AI:</strong> ' + msg + '</span>';
-      bubble.classList.add('show');
-    }, 300);
+    // Steve quotes only show on the final results page, not during selection
   }
 
   // Gemini API key management
@@ -1819,13 +1813,45 @@
             content.style.display = 'block';
             renderHelmetCanvases();
 
-            // Now set the image src and start the visible timer
-            var aiImg = document.getElementById('aiImg');
-            var urlEl = document.getElementById('preloadUrl');
-            if (aiImg && urlEl && urlEl.value) {
-              aiImg.src = urlEl.value;
-            }
-            window._startImageTimer();
+            // Give DOM one frame to paint, then set image src and start timer
+            requestAnimationFrame(function() {
+              var aiImg = document.getElementById('aiImg');
+              var urlEl = document.getElementById('preloadUrl');
+              var spinnerEl = document.getElementById('aiSpinner');
+              var timerEl = document.getElementById('aiTimer');
+
+              if (aiImg && urlEl && urlEl.value) {
+                var imgUrl = urlEl.value;
+
+                // Set up load/error handlers BEFORE setting src
+                aiImg.onload = function() {
+                  aiImg.style.display = 'block';
+                  if (spinnerEl) spinnerEl.style.display = 'none';
+                  if (_imgTimer) clearInterval(_imgTimer);
+                };
+                aiImg.onerror = function() {
+                  if (timerEl) timerEl.textContent = 'Retrying...';
+                  setTimeout(function() {
+                    aiImg.src = imgUrl + '&retry=' + Date.now();
+                  }, 3000);
+                };
+
+                // Start countdown timer
+                var secs = 0;
+                if (_imgTimer) clearInterval(_imgTimer);
+                _imgTimer = setInterval(function() {
+                  secs++;
+                  if (timerEl) timerEl.textContent = secs + 's';
+                  if (secs >= 60) {
+                    clearInterval(_imgTimer);
+                    if (spinnerEl) spinnerEl.innerHTML = '<div style="padding:20px;color:var(--gray);">Render timed out — click <strong style="color:var(--red);">Regenerate</strong></div>';
+                  }
+                }, 1000);
+
+                // Now set the src to kick off loading
+                aiImg.src = imgUrl;
+              }
+            });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
