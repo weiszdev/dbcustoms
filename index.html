@@ -55,6 +55,29 @@
     }
     .header-contact a { color: var(--red); }
 
+    /* Settings gear */
+    .settings-btn {
+      background: none; border: none; color: var(--gray); cursor: pointer;
+      font-size: 1.1rem; padding: 4px; transition: color 0.2s;
+    }
+    .settings-btn:hover { color: var(--gold); }
+    .settings-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+      align-items: center; justify-content: center; z-index: 200; padding: 20px;
+    }
+    .settings-modal.show { display: flex; }
+    .settings-box {
+      background: var(--dark); border: 1px solid var(--dark3); border-radius: 12px;
+      padding: 30px; max-width: 420px; width: 100%;
+    }
+    .settings-box h3 { font-size: 1.1rem; color: var(--gold); margin-bottom: 14px; }
+    .settings-box input {
+      width: 100%; padding: 10px 14px; background: var(--dark2); border: 2px solid var(--dark3);
+      border-radius: 6px; color: var(--white); font-family: monospace; font-size: 0.82rem; margin-bottom: 10px;
+    }
+    .settings-box input:focus { outline: none; border-color: var(--red); }
+    .settings-box .hint { font-size: 0.72rem; color: var(--gray); margin-bottom: 14px; line-height: 1.4; }
+
     /* Progress */
     .progress-bar {
       background: var(--dark);
@@ -456,9 +479,26 @@
       <img src="https://dbcustoms.com/wp-content/uploads/2024/07/DBcustoms-logo.png" alt="DB Customs" class="header-logo" onerror="this.style.display='none'">
       <h1>DB <span>Customs</span></h1>
     </div>
-    <div class="header-contact">
-      <div><a href="tel:7012262553">701.226.2553</a></div>
-      <div><a href="mailto:schtev@dbcustoms.com">schtev@dbcustoms.com</a></div>
+    <div class="header-contact" style="display:flex;align-items:center;gap:10px;">
+      <div>
+        <div><a href="tel:7012262553">701.226.2553</a></div>
+        <div><a href="mailto:schtev@dbcustoms.com">schtev@dbcustoms.com</a></div>
+      </div>
+      <button class="settings-btn" onclick="document.getElementById('settingsModal').classList.add('show')" title="AI Settings">&#9881;</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-box">
+      <h3>AI Image Settings</h3>
+      <p class="hint">Paste your Google Gemini API key to enable Nano Banana image generation. Get a free key at <a href="https://aistudio.google.com/apikey" style="color:var(--red);">aistudio.google.com/apikey</a> — 500 free images/day.</p>
+      <input type="password" id="geminiKeyInput" placeholder="Gemini API Key (AIza...)" value="">
+      <div style="display:flex;gap:8px;">
+        <button class="nav-btn next" style="font-size:0.8rem;padding:8px 16px;" onclick="window._saveGeminiKey()">Save</button>
+        <button class="nav-btn prev" style="font-size:0.8rem;padding:8px 16px;" onclick="document.getElementById('settingsModal').classList.remove('show')">Cancel</button>
+      </div>
+      <div id="keyStatus" style="font-size:0.75rem;margin-top:8px;"></div>
     </div>
   </div>
 
@@ -545,16 +585,26 @@
   ];
 
   var AI_RESPONSES = [
-    "That's a killer combo! The contrast is going to pop under the lights.",
-    "Love that direction — Steve does incredible work with that style. This is going to turn heads.",
-    "Great eye! That color palette is going to look insane with a matte finish.",
-    "Oh man, that's a strong choice. This has podium-level energy.",
-    "Solid pick — that style photographs beautifully and looks even better in person.",
-    "You've got a great sense of design. Steve's going to love bringing this one to life.",
-    "That combination is 🔥 — trust me, people are going to ask you where you got it painted.",
-    "Nice! That's exactly the kind of detail that separates a custom lid from everything else on the grid.",
-    "You're building something special here. The color choices alone are going to set this apart.",
-    "That's the kind of design that makes people stop and look twice. Let's keep going."
+    "That's a killer combo! The contrast is going to pop under the lights. — Steve",
+    "Love that direction — I do my best work with that kind of style. This one's gonna turn heads. — Steve",
+    "Great eye! That color palette with a good clear coat is going to look insane in the sun. — Steve",
+    "Oh man, that's a strong choice. This has podium-level energy. I can already picture it. — Steve",
+    "Solid pick — I've done a few like this and they always photograph beautifully. Even better in person. — Steve",
+    "You've got a real sense of design. I'm excited to get my hands on this one. — Steve",
+    "That combination is fire — trust me, people at the track are going to ask where you got it painted. — Steve",
+    "Nice! That's exactly the kind of detail that separates a custom lid from everything else on the grid. — Steve",
+    "You're building something special here. The color choices alone set this apart from anything I've seen lately. — Steve",
+    "That's the kind of design that makes people stop mid-conversation and stare. Let's keep going. — Steve",
+    "I've painted a lot of helmets but this direction has me genuinely hyped. Let's make it happen. — Steve",
+    "You clearly know what you want — that makes my job easier and the end result way better. — Steve",
+    "This is giving me serious race day vibes. When people line up on the gate, this helmet is going to stand out. — Steve",
+    "I'm already thinking about how to layer these colors. The depth on this one is going to be unreal. — Steve",
+    "You know what I love about this? It's YOUR design. Nobody else on the planet is going to have this lid. — Steve",
+    "That finish choice is perfect for these colors. The way it catches light is going to be chef's kiss. — Steve",
+    "Every choice you've made so far tells me you've thought about this. That always produces the best helmets. — Steve",
+    "I can tell you're a rider. Only someone who's been on the gate picks colors like that. — Steve",
+    "The more detail you give me, the closer I nail it on the first pass. You're doing great here. — Steve",
+    "When you see this in person for the first time, you're going to lose it. I guarantee it. — Steve"
   ];
 
   var STEP_LABELS = ['Helmet Type','Brand & Model','Design Style','Colors & Finish','Zone Designer','Your Vision','Details','Your Design'];
@@ -927,15 +977,27 @@
     html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI-Generated Concept Render</h3>';
     html += '<p style="font-size:0.82rem;color:var(--gray);margin-bottom:12px;">Select a concept direction above to generate an AI visualization of your helmet design.</p>';
     html += '<div id="aiImageContainer" style="text-align:center;">';
+    var iosPrompt = 'Apple-style product photography of a custom hand-painted ' + typeName + ' racing helmet by ' + (state.brand || 'premium brand') + '. Design: ' + styleName + '. Colors: ' + (colorNames || 'custom palette') + '. Finish: ' + finishName + '. Clean white infinity curve studio background, soft diffused lighting, subtle shadow beneath helmet, ultra-sharp focus, 8K resolution, magazine-quality product shot. Helmet floating slightly, dramatic but clean. No text, no watermark.';
+
     if (state.selectedConcept !== undefined && state.selectedConcept !== null) {
       var sc = concepts[state.selectedConcept];
       var seed = state.aiSeed || (state.selectedConcept + 1);
-      var prompt = encodeURIComponent('Professional product photo of a custom painted ' + typeName + ' racing helmet, ' + (state.brand || '') + ' brand, ' + sc.desc + ', colors ' + colorNames + ', ' + finishName + ' finish, studio lighting, black background, photorealistic, 4k');
-      html += '<div style="position:relative;display:inline-block;">';
-      html += '<img id="aiImg" src="https://pollinations.ai/p/' + prompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Generated Helmet Concept" onload="document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="document.getElementById(\'aiSpinner\').innerHTML=\'Image taking longer than expected...\'">';
-      html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating AI render...</div></div></div>';
+      var fullPrompt = iosPrompt + ' Concept direction: ' + sc.desc;
+
+      html += '<div id="geminiRender">';
+      if (GEMINI_KEY) {
+        // Nano Banana — will render via JS after DOM is ready
+        html += '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div></div>';
+      } else {
+        // Pollinations fallback
+        var encodedPrompt = encodeURIComponent(fullPrompt);
+        html += '<div style="position:relative;display:inline-block;">';
+        html += '<img id="aiImg" src="https://pollinations.ai/p/' + encodedPrompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Generated Helmet Concept" onload="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').innerHTML=\'Image taking longer than expected — try Regenerate.\'">';
+        html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating render...</div></div></div>';
+        html += '</div>';
+      }
       html += '</div>';
-      html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — AI-generated visualization. Actual hand-painted result will be even better.</div>';
+      html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — ' + (GEMINI_KEY ? 'Nano Banana (Gemini)' : 'AI visualization') + '. Actual hand-painted result will be even better.</div>';
       html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
       html += '<button class="nav-btn next" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI()">Regenerate</button>';
       html += '<button class="nav-btn prev" style="font-size:0.8rem;padding:8px 20px;" onclick="window._regenerateAI(\'different\')">Try Different Style</button>';
@@ -1160,13 +1222,90 @@
     }, 300);
   }
 
+  // Gemini API key management
+  var GEMINI_KEY = localStorage.getItem('db_gemini_key') || '';
+  var geminiKeyInput = document.getElementById('geminiKeyInput');
+  if (geminiKeyInput && GEMINI_KEY) geminiKeyInput.value = GEMINI_KEY;
+
+  window._saveGeminiKey = function() {
+    var input = document.getElementById('geminiKeyInput');
+    var status = document.getElementById('keyStatus');
+    var key = input.value.trim();
+    if (key) {
+      localStorage.setItem('db_gemini_key', key);
+      GEMINI_KEY = key;
+      status.textContent = 'Key saved! Nano Banana enabled.';
+      status.style.color = 'var(--green)';
+      setTimeout(function() { document.getElementById('settingsModal').classList.remove('show'); }, 1000);
+    } else {
+      localStorage.removeItem('db_gemini_key');
+      GEMINI_KEY = '';
+      status.textContent = 'Key cleared. Using Pollinations fallback.';
+      status.style.color = 'var(--gray)';
+    }
+  };
+
+  // Gemini Nano Banana image generation
+  window._generateGeminiImage = function(prompt, containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div><div style="font-size:0.78rem;color:var(--gray);margin-top:4px;">Creating your custom helmet render</div></div>';
+
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + GEMINI_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        var parts = data.candidates[0].content.parts;
+        var imgHtml = '';
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].inlineData) {
+            imgHtml += '<img src="data:' + parts[i].inlineData.mimeType + ';base64,' + parts[i].inlineData.data + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);margin-bottom:8px;" alt="Nano Banana Helmet Render">';
+          }
+        }
+        if (imgHtml) {
+          container.innerHTML = imgHtml + '<div style="font-size:0.72rem;color:var(--gold);margin-top:6px;">Generated by Nano Banana (Gemini)</div>';
+        } else {
+          container.innerHTML = '<div style="padding:20px;color:var(--gray);font-size:0.85rem;">No image returned — try regenerating or adjusting your design.</div>';
+        }
+      } else {
+        var errMsg = (data.error && data.error.message) ? data.error.message : 'Unknown error';
+        container.innerHTML = '<div style="padding:20px;color:var(--red);font-size:0.82rem;">Gemini error: ' + errMsg + '</div>';
+      }
+    })
+    .catch(function(err) {
+      container.innerHTML = '<div style="padding:20px;color:var(--red);font-size:0.82rem;">Connection error — falling back to Pollinations.</div>';
+    });
+  };
+
   window._regenerateAI = function(mode) {
     if (mode === 'different') {
-      // Cycle to next concept
       state.selectedConcept = (state.selectedConcept + 1) % 3;
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
-    render();
+
+    if (GEMINI_KEY && state.selectedConcept !== null) {
+      // Re-trigger Gemini directly without full re-render
+      var sc = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id===s; }); return f ? f.label : s; }).join(' + ') || 'Custom';
+      var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex===c; }); return f ? f.name : c; }).join(', ');
+      var fn = FINISHES.find(function(f){ return f.id===state.finish; });
+      var tn = HELMET_TYPES.find(function(t){ return t.id===state.type; });
+      var cpts = generateConcepts(sc, cn, fn ? fn.label : 'gloss', tn ? tn.label : '');
+      var dir = cpts[state.selectedConcept];
+      var prompt = 'Apple-style product photography of a custom hand-painted ' + (tn ? tn.label : '') + ' racing helmet by ' + (state.brand || 'premium brand') + '. ' + dir.desc + '. Colors: ' + (cn || 'custom') + '. Finish: ' + (fn ? fn.label : 'gloss') + '. Clean white studio background, soft diffused lighting, ultra-sharp, 8K, magazine-quality. No text. Variation seed: ' + state.aiSeed;
+      window._generateGeminiImage(prompt, 'geminiRender');
+    } else {
+      render();
+    }
   };
 
   window._restart = function() {
@@ -1464,10 +1603,16 @@
     link.click();
   };
 
-  // Hook render to draw canvases after step 7 renders with loading animation
+  // Hook render to draw canvases and trigger Gemini after step 7 renders
   var _origRender = render;
+  var _geminiPromptCache = '';
   render = function() {
     _origRender();
+
+    // Update gemini key input if settings modal is open
+    var gki = document.getElementById('geminiKeyInput');
+    if (gki && GEMINI_KEY && !gki.value) gki.value = GEMINI_KEY;
+
     if (state.step === 7) {
       var overlay = document.getElementById('loadingOverlay');
       var content = document.getElementById('resultsContent');
@@ -1506,6 +1651,15 @@
               overlay.style.display = 'none';
               content.style.display = 'block';
               renderHelmetCanvases();
+              // Trigger Gemini if key is set and a concept is selected
+              if (GEMINI_KEY && state.selectedConcept !== null) {
+                var sc = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id===s; }); return f ? f.label : s; }).join(' + ') || 'Custom';
+                var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex===c; }); return f ? f.name : c; }).join(', ');
+                var fn = FINISHES.find(function(f){ return f.id===state.finish; });
+                var tn = HELMET_TYPES.find(function(t){ return t.id===state.type; });
+                var prompt = 'Apple-style product photography of a custom hand-painted ' + (tn ? tn.label : '') + ' racing helmet by ' + (state.brand || 'premium brand') + '. Design: ' + sc + '. Colors: ' + (cn || 'custom') + '. Finish: ' + (fn ? fn.label : 'gloss') + '. Clean white infinity curve studio background, soft diffused lighting, subtle shadow, ultra-sharp focus, 8K, magazine-quality. No text, no watermark.';
+                window._generateGeminiImage(prompt, 'geminiRender');
+              }
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 400);
           }
