@@ -977,12 +977,10 @@
     html += '<h3 style="color:var(--gold);margin:20px 0 12px;font-size:1.1rem;">AI-Generated Concept Render</h3>';
     html += '<p style="font-size:0.82rem;color:var(--gray);margin-bottom:12px;">Select a concept direction above to generate an AI visualization of your helmet design.</p>';
     html += '<div id="aiImageContainer" style="text-align:center;">';
-    var iosPrompt = 'Apple-style product photography of a custom hand-painted ' + typeName + ' racing helmet by ' + (state.brand || 'premium brand') + '. Design: ' + styleName + '. Colors: ' + (colorNames || 'custom palette') + '. Finish: ' + finishName + '. Clean white infinity curve studio background, soft diffused lighting, subtle shadow beneath helmet, ultra-sharp focus, 8K resolution, magazine-quality product shot. Helmet floating slightly, dramatic but clean. No text, no watermark.';
-
     if (state.selectedConcept !== undefined && state.selectedConcept !== null) {
       var sc = concepts[state.selectedConcept];
       var seed = state.aiSeed || (state.selectedConcept + 1);
-      var fullPrompt = iosPrompt + ' Concept direction: ' + sc.desc;
+      var fullPrompt = buildImagePrompt(sc.desc);
 
       html += '<div id="geminiRender">';
       if (GEMINI_KEY) {
@@ -1245,46 +1243,108 @@
     }
   };
 
-  // Gemini Nano Banana image generation
+  // Build detailed prompt from all user selections
+  function buildImagePrompt(conceptDesc) {
+    var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+    var helmType = tn ? tn.label : 'racing';
+    var brand = state.brand || 'custom';
+    var model = state.model || '';
+    var sc = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(', ') || 'custom design';
+    var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; });
+    var fn = FINISHES.find(function(f){ return f.id === state.finish; });
+    var finishStr = fn ? fn.label : 'gloss';
+
+    // Zone descriptions
+    var zoneParts = [];
+    HELMET_ZONES.forEach(function(z) {
+      var zd = state.zones[z.id];
+      if (zd) {
+        var cName = zd.color ? (COLORS.find(function(x){ return x.hex === zd.color; }) || {}).name || zd.color : '';
+        var eName = zd.effect ? (ZONE_EFFECTS.find(function(e){ return e.id === zd.effect; }) || {}).label || '' : '';
+        if (cName || eName) zoneParts.push(z.label + ': ' + (cName || '') + ' ' + (eName || ''));
+      }
+    });
+
+    var prompt = 'Photorealistic product photograph of a ' + brand + ' ' + model + ' ' + helmType + ' helmet with a professional custom airbrush paint job. ';
+    prompt += 'The ' + brand + ' logo is visible on the helmet. ';
+    prompt += 'Design style: ' + sc + '. ';
+    prompt += 'Primary colors: ' + cn.join(', ') + '. ';
+    prompt += 'Finish: ' + finishStr + '. ';
+    if (conceptDesc) prompt += 'Design concept: ' + conceptDesc + '. ';
+    if (zoneParts.length > 0) prompt += 'Zone layout: ' + zoneParts.join('; ') + '. ';
+    if (state.number) prompt += 'Racing number "' + state.number + '" prominently displayed. ';
+    if (state.logos) prompt += 'Logos/text: ' + state.logos + '. ';
+    if (state.description) prompt += 'Artist vision: ' + state.description + '. ';
+    prompt += 'Shot in an Apple-style studio with clean white infinity curve background, soft diffused lighting from above and sides, subtle ground shadow, ultra-sharp focus, 8K resolution. The helmet appears to float slightly. Magazine-quality product shot. No text overlays, no watermarks.';
+
+    return prompt;
+  }
+
+  // Gemini Nano Banana image generation — tries multiple models, falls back to Pollinations
+  var GEMINI_MODELS = [
+    'gemini-2.0-flash-preview-image-generation',
+    'gemini-2.0-flash-exp'
+  ];
+
   window._generateGeminiImage = function(prompt, containerId) {
     var container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div><div style="font-size:0.78rem;color:var(--gray);margin-top:4px;">Creating your custom helmet render</div></div>';
+    container.innerHTML = '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div><div style="font-size:0.78rem;color:var(--gray);margin-top:4px;">Creating your custom helmet render</div><div id="geminiStatus" style="font-size:0.7rem;color:var(--gray);margin-top:8px;"></div></div>';
 
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + GEMINI_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE']
+    function tryModel(modelIdx) {
+      if (modelIdx >= GEMINI_MODELS.length) {
+        // All models failed — fall back to Pollinations
+        var fallbackPrompt = encodeURIComponent(prompt);
+        var seed = state.aiSeed || Math.floor(Math.random() * 99999);
+        container.innerHTML = '<div style="position:relative;display:inline-block;"><img src="https://pollinations.ai/p/' + fallbackPrompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Helmet Render" onload="this.nextElementSibling.style.display=\'none\'" onerror="this.nextElementSibling.innerHTML=\'Retry with Regenerate button\'"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating via Pollinations...</div></div></div></div><div style="font-size:0.72rem;color:var(--gray);margin-top:6px;">Fallback render (Gemini unavailable)</div>';
+        return;
+      }
+
+      var model = GEMINI_MODELS[modelIdx];
+      var statusEl = document.getElementById('geminiStatus');
+      if (statusEl) statusEl.textContent = 'Trying ' + model + '...';
+
+      fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_KEY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Generate an image: ' + prompt }] }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE']
+          }
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+          var parts = data.candidates[0].content.parts;
+          var imgHtml = '';
+          for (var i = 0; i < parts.length; i++) {
+            if (parts[i].inlineData) {
+              imgHtml += '<img src="data:' + parts[i].inlineData.mimeType + ';base64,' + parts[i].inlineData.data + '" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);margin-bottom:8px;" alt="Nano Banana Helmet Render">';
+            }
+          }
+          if (imgHtml) {
+            container.innerHTML = imgHtml + '<div style="font-size:0.72rem;color:var(--gold);margin-top:6px;">Generated by Nano Banana (' + model + ')</div>';
+          } else {
+            // Model responded but no image — try next
+            tryModel(modelIdx + 1);
+          }
+        } else if (data.error) {
+          // API error — try next model
+          tryModel(modelIdx + 1);
+        } else {
+          tryModel(modelIdx + 1);
         }
       })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        var parts = data.candidates[0].content.parts;
-        var imgHtml = '';
-        for (var i = 0; i < parts.length; i++) {
-          if (parts[i].inlineData) {
-            imgHtml += '<img src="data:' + parts[i].inlineData.mimeType + ';base64,' + parts[i].inlineData.data + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);margin-bottom:8px;" alt="Nano Banana Helmet Render">';
-          }
-        }
-        if (imgHtml) {
-          container.innerHTML = imgHtml + '<div style="font-size:0.72rem;color:var(--gold);margin-top:6px;">Generated by Nano Banana (Gemini)</div>';
-        } else {
-          container.innerHTML = '<div style="padding:20px;color:var(--gray);font-size:0.85rem;">No image returned — try regenerating or adjusting your design.</div>';
-        }
-      } else {
-        var errMsg = (data.error && data.error.message) ? data.error.message : 'Unknown error';
-        container.innerHTML = '<div style="padding:20px;color:var(--red);font-size:0.82rem;">Gemini error: ' + errMsg + '</div>';
-      }
-    })
-    .catch(function(err) {
-      container.innerHTML = '<div style="padding:20px;color:var(--red);font-size:0.82rem;">Connection error — falling back to Pollinations.</div>';
-    });
+      .catch(function() {
+        // Network/CORS error — try next model
+        tryModel(modelIdx + 1);
+      });
+    }
+
+    tryModel(0);
   };
 
   window._regenerateAI = function(mode) {
@@ -1294,15 +1354,9 @@
     state.aiSeed = Math.floor(Math.random() * 99999);
 
     if (GEMINI_KEY && state.selectedConcept !== null) {
-      // Re-trigger Gemini directly without full re-render
-      var sc = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id===s; }); return f ? f.label : s; }).join(' + ') || 'Custom';
-      var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex===c; }); return f ? f.name : c; }).join(', ');
-      var fn = FINISHES.find(function(f){ return f.id===state.finish; });
-      var tn = HELMET_TYPES.find(function(t){ return t.id===state.type; });
-      var cpts = generateConcepts(sc, cn, fn ? fn.label : 'gloss', tn ? tn.label : '');
+      var cpts = generateConcepts('','','','');
       var dir = cpts[state.selectedConcept];
-      var prompt = 'Apple-style product photography of a custom hand-painted ' + (tn ? tn.label : '') + ' racing helmet by ' + (state.brand || 'premium brand') + '. ' + dir.desc + '. Colors: ' + (cn || 'custom') + '. Finish: ' + (fn ? fn.label : 'gloss') + '. Clean white studio background, soft diffused lighting, ultra-sharp, 8K, magazine-quality. No text. Variation seed: ' + state.aiSeed;
-      window._generateGeminiImage(prompt, 'geminiRender');
+      window._generateGeminiImage(buildImagePrompt(dir ? dir.desc : '') + ' Variation: ' + state.aiSeed, 'geminiRender');
     } else {
       render();
     }
@@ -1653,12 +1707,9 @@
               renderHelmetCanvases();
               // Trigger Gemini if key is set and a concept is selected
               if (GEMINI_KEY && state.selectedConcept !== null) {
-                var sc = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id===s; }); return f ? f.label : s; }).join(' + ') || 'Custom';
-                var cn = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex===c; }); return f ? f.name : c; }).join(', ');
-                var fn = FINISHES.find(function(f){ return f.id===state.finish; });
-                var tn = HELMET_TYPES.find(function(t){ return t.id===state.type; });
-                var prompt = 'Apple-style product photography of a custom hand-painted ' + (tn ? tn.label : '') + ' racing helmet by ' + (state.brand || 'premium brand') + '. Design: ' + sc + '. Colors: ' + (cn || 'custom') + '. Finish: ' + (fn ? fn.label : 'gloss') + '. Clean white infinity curve studio background, soft diffused lighting, subtle shadow, ultra-sharp focus, 8K, magazine-quality. No text, no watermark.';
-                window._generateGeminiImage(prompt, 'geminiRender');
+                var cpts = generateConcepts('','','','');
+                var dir = cpts[state.selectedConcept];
+                window._generateGeminiImage(buildImagePrompt(dir ? dir.desc : ''), 'geminiRender');
               }
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 400);
