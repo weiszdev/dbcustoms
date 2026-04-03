@@ -961,6 +961,9 @@
     var typeName = HELMET_TYPES.find(function(t){ return t.id === state.type; });
     typeName = typeName ? typeName.label : '';
 
+    // Generate concepts EARLY so they're available for the preload URL
+    var concepts = generateConcepts(styleName, colorNames, finishName, typeName);
+
     var html = '<div class="step-header"><div class="step-num">Your Design</div><h2>Here\'s What We\'re Working With</h2><p>Review your design brief below. Steve will use this as the starting point for your custom helmet.</p></div>';
     html += '<div class="step-body">';
 
@@ -1024,7 +1027,6 @@
     html += '<h3 style="color:var(--gold);margin-bottom:12px;font-size:1.1rem;">3 Concept Directions From the Studio</h3>';
     html += '<div class="concept-grid">';
 
-    var concepts = generateConcepts(styleName, colorNames, finishName, typeName);
     concepts.forEach(function(c, ci) {
       var sel = state.selectedConcept === ci;
       html += '<div class="concept-card' + (sel ? '" style="border-color:var(--red);background:rgba(230,57,70,0.1);' : '') + '" data-concept="' + ci + '"><div class="concept-icon">' + c.icon + '</div><h4>' + c.title + '</h4><p>' + c.desc + '</p>';
