@@ -976,14 +976,14 @@
     html += '</div>';
     html += '<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}</style>';
 
-    // Hidden preload image — starts loading immediately when this HTML renders
-    var sc = concepts[state.selectedConcept];
+    // Store the image URL for use after countdown
+    var sc_pre = concepts[state.selectedConcept];
     var preloadSeed = state.aiSeed || (state.selectedConcept + 1);
     var shortPrompt = 'Custom painted ' + (state.brand || 'racing') + ' ' + helmType + ' helmet, ' + styleName.toLowerCase() + ' design, ' + (colorNames || 'bold colors') + ', ' + finishName.toLowerCase() + ' finish';
     if (state.number) shortPrompt += ', number ' + state.number;
     if (state.pinLine === 'standard') { var plc = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'black'; shortPrompt += ', thin ' + plc + ' pin lines at color transitions'; }
-    shortPrompt += ', ' + sc.desc + ', professional product photo, studio lighting, white background, photorealistic';
-    html += '<img id="preloadImg" src="https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt) + '?width=768&height=768&nologo=true&seed=' + preloadSeed + '" style="display:none;" crossorigin="anonymous">';
+    shortPrompt += ', ' + sc_pre.desc + ', professional product photo, studio lighting, white background, photorealistic';
+    html += '<input type="hidden" id="preloadUrl" value="https://image.pollinations.ai/prompt/' + encodeURIComponent(shortPrompt) + '?width=768&height=768&nologo=true&seed=' + preloadSeed + '">';
 
     // Content container — hidden until loading completes
     html += '<div id="resultsContent" style="display:none;">';
@@ -1758,8 +1758,6 @@
 
         var totalSeconds = 30;
         var secondsLeft = totalSeconds;
-        var imageLoaded = false;
-
         var messages = [
           { at: 29, text: 'Steve just cracked his knuckles...' },
           { at: 27, text: 'Shaking the spray cans... pssshhh pssshhh' },
@@ -1778,21 +1776,6 @@
           { at: 1, text: 'Chef\'s kiss. It\'s ready.' }
         ];
 
-        // Watch for preload image to finish loading
-        if (preImg) {
-          preImg.onload = function() {
-            imageLoaded = true;
-            // Transfer to the visible img element
-            var aiImg = document.getElementById('aiImg');
-            if (aiImg) {
-              aiImg.src = preImg.src;
-              aiImg.style.display = 'block';
-              var spinner = document.getElementById('aiSpinner');
-              if (spinner) spinner.style.display = 'none';
-            }
-          };
-        }
-
         var timer = setInterval(function() {
           secondsLeft--;
           if (countdown) countdown.textContent = Math.max(secondsLeft, 0);
@@ -1802,17 +1785,19 @@
             if (secondsLeft <= m.at && statusEl && statusEl.textContent !== m.text) statusEl.textContent = m.text;
           });
 
-          // If image loaded early, speed up the countdown
-          if (imageLoaded && secondsLeft > 3) secondsLeft = 3;
-
           if (secondsLeft <= 0) {
             clearInterval(timer);
             overlay.style.display = 'none';
             content.style.display = 'block';
             renderHelmetCanvases();
 
-            // If image still hasn't loaded, start the visible timer
-            if (!imageLoaded) window._startImageTimer();
+            // Now set the image src and start the visible timer
+            var aiImg = document.getElementById('aiImg');
+            var urlEl = document.getElementById('preloadUrl');
+            if (aiImg && urlEl && urlEl.value) {
+              aiImg.src = urlEl.value;
+            }
+            window._startImageTimer();
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
