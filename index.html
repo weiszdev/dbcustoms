@@ -484,7 +484,7 @@
         <div><a href="tel:7012262553">701.226.2553</a></div>
         <div><a href="mailto:schtev@dbcustoms.com">schtev@dbcustoms.com</a></div>
       </div>
-      <button class="settings-btn" onclick="document.getElementById('settingsModal').classList.add('show')" title="AI Settings" style="display:none;">&#9881;</button>
+      <button class="settings-btn" onclick="document.getElementById('settingsModal').classList.add('show')" title="AI Settings">&#9881;</button>
     </div>
   </div>
 
@@ -1291,7 +1291,7 @@
   }
 
   // Gemini API key management
-  var GEMINI_KEY = localStorage.getItem('db_gemini_key') || 'AIzaSyAn8WEdzKsvY-HkOijRVcqy29DKIBAOO0c';
+  var GEMINI_KEY = localStorage.getItem('db_gemini_key') || '';
   var geminiKeyInput = document.getElementById('geminiKeyInput');
   if (geminiKeyInput && GEMINI_KEY) geminiKeyInput.value = GEMINI_KEY;
 
@@ -1371,7 +1371,34 @@
     return prompt;
   }
 
-  // Gemini Nano Banana image generation — tries multiple models, falls back to Pollinations
+  // Build the simple brief format that works with Gemini
+  function buildGeminiBrief() {
+    var tn = HELMET_TYPES.find(function(t){ return t.id === state.type; });
+    var styleNames = state.styles.map(function(s) { var f = DESIGN_STYLES.find(function(d){ return d.id === s; }); return f ? f.label : s; }).join(' + ') || 'Custom';
+    var colorNames = state.colors.map(function(c) { var f = COLORS.find(function(x){ return x.hex === c; }); return f ? f.name : c; }).join(', ') || 'Custom';
+    var fn = FINISHES.find(function(f){ return f.id === state.finish; });
+    var pinLabel = 'None';
+    if (state.pinLine === 'standard') {
+      var plcN = (COLORS.find(function(x){ return x.hex === state.pinLineColor; }) || {}).name || 'Black';
+      pinLabel = 'Standard Pin Lines — ' + plcN;
+    }
+
+    var brief = 'Read this design brief and build a ' + (tn ? tn.label : 'racing') + ' helmet only on a black background rendered to be life like:\n\n';
+    brief += 'Helmet Type: ' + (tn ? tn.label : 'Racing') + '\n';
+    brief += 'Brand: ' + (state.brand || 'Custom') + '\n';
+    if (state.model) brief += 'Model: ' + state.model + '\n';
+    brief += 'Style: ' + styleNames + '\n';
+    brief += 'Colors: ' + colorNames + '\n';
+    brief += 'Finish: ' + (fn ? fn.label : 'Gloss') + '\n';
+    brief += 'Pin Lines: ' + pinLabel + '\n';
+    if (state.number) brief += 'Number: ' + state.number + '\n';
+    if (state.logos) brief += 'Logos: ' + state.logos + '\n';
+    if (state.description) brief += 'Vision: ' + state.description + '\n';
+
+    return brief;
+  }
+
+  // Gemini image generation — uses the brief format that actually produces renders
   var GEMINI_MODELS = [
     'gemini-2.5-flash-image',
     'gemini-3.1-flash-image-preview',
@@ -1382,14 +1409,26 @@
     var container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div><div style="font-size:0.78rem;color:var(--gray);margin-top:4px;">Creating your custom helmet render</div><div id="geminiStatus" style="font-size:0.7rem;color:var(--gray);margin-top:8px;"></div></div>';
+    // Don't clear the canvas — overlay a loading indicator on top
+    var existingCanvas = container.querySelector('#conceptCanvas');
+    if (existingCanvas) existingCanvas.style.filter = 'blur(4px)';
+    // Add overlay
+    var loadDiv = document.createElement('div');
+    loadDiv.id = 'geminiOverlay';
+    loadDiv.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;background:rgba(0,0,0,0.5);z-index:2;';
+    loadDiv.innerHTML = '<div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:8px;font-weight:600;">Generating AI render...</div><div id="geminiStatus" style="font-size:0.7rem;color:var(--gray);margin-top:6px;"></div></div>';
+    container.style.position = 'relative';
+    var oldOverlay = document.getElementById('geminiOverlay');
+    if (oldOverlay) oldOverlay.remove();
+    container.appendChild(loadDiv);
 
     function tryModel(modelIdx) {
       if (modelIdx >= GEMINI_MODELS.length) {
-        // All models failed — fall back to Pollinations
-        var fallbackPrompt = encodeURIComponent(prompt);
-        var seed = state.aiSeed || Math.floor(Math.random() * 99999);
-        container.innerHTML = '<div style="position:relative;display:inline-block;"><img src="https://pollinations.ai/p/' + fallbackPrompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Helmet Render" onload="this.nextElementSibling.style.display=\'none\'" onerror="this.nextElementSibling.innerHTML=\'Retry with Regenerate button\'"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating via Pollinations...</div></div></div></div><div style="font-size:0.72rem;color:var(--gray);margin-top:6px;">Fallback render (Gemini unavailable)</div>';
+        // All models failed — keep the canvas concept, remove overlay
+        var overlay = document.getElementById('geminiOverlay');
+        if (overlay) overlay.remove();
+        var canvas = container.querySelector('#conceptCanvas');
+        if (canvas) canvas.style.filter = 'blur(0px)';
         return;
       }
 
@@ -1401,9 +1440,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Generate an image: ' + prompt }] }],
+          contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE']
+            responseModalities: ['IMAGE', 'TEXT']
           }
         })
       })
@@ -1418,20 +1457,25 @@
             }
           }
           if (imgHtml) {
-            container.innerHTML = imgHtml + '<div style="font-size:0.72rem;color:var(--gold);margin-top:6px;">Generated by Nano Banana (' + model + ')</div>';
+            // Success! Replace canvas with real render
+            var overlay = document.getElementById('geminiOverlay');
+            if (overlay) overlay.remove();
+            var canvas = container.querySelector('#conceptCanvas');
+            if (canvas) canvas.style.display = 'none';
+            // Insert the image
+            var imgDiv = document.createElement('div');
+            imgDiv.innerHTML = imgHtml + '<div style="font-size:0.72rem;color:var(--gold);margin-top:6px;">AI Render by Nano Banana</div>';
+            container.insertBefore(imgDiv, container.firstChild);
           } else {
-            // Model responded but no image — try next
             tryModel(modelIdx + 1);
           }
         } else if (data.error) {
-          // API error — try next model
           tryModel(modelIdx + 1);
         } else {
           tryModel(modelIdx + 1);
         }
       })
       .catch(function() {
-        // Network/CORS error — try next model
         tryModel(modelIdx + 1);
       });
     }
@@ -1444,8 +1488,10 @@
       state.selectedConcept = (state.selectedConcept + 1) % 3;
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
-    // Just redraw the canvas concept
     window._drawConceptPlaceholder();
+    if (GEMINI_KEY) {
+      window._generateGeminiImage(buildGeminiBrief(), 'aiImageContainer');
+    }
   };
 
   window._restart = function() {
@@ -1801,9 +1847,12 @@
             content.style.display = 'block';
             renderHelmetCanvases();
 
-            // Draw the concept render
+            // Draw canvas first, then try Gemini if key available
             requestAnimationFrame(function() {
               window._drawConceptPlaceholder();
+              if (GEMINI_KEY) {
+                window._generateGeminiImage(buildGeminiBrief(), 'aiImageContainer');
+              }
             });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
