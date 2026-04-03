@@ -982,18 +982,11 @@
       var seed = state.aiSeed || (state.selectedConcept + 1);
       var fullPrompt = buildImagePrompt(sc.desc);
 
-      html += '<div id="geminiRender">';
-      if (GEMINI_KEY) {
-        // Nano Banana — will render via JS after DOM is ready
-        html += '<div style="padding:40px;text-align:center;background:var(--dark2);border-radius:12px;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🍌</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Nano Banana generating...</div></div>';
-      } else {
-        // Pollinations fallback
-        var encodedPrompt = encodeURIComponent(fullPrompt);
-        html += '<div style="position:relative;display:inline-block;">';
-        html += '<img id="aiImg" src="https://pollinations.ai/p/' + encodedPrompt + '?width=512&height=512&nologo=true&seed=' + seed + '" style="max-width:100%;border-radius:12px;border:2px solid var(--dark3);" alt="AI Generated Helmet Concept" onload="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').innerHTML=\'Image taking longer than expected — try Regenerate.\'">';
-        html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">Generating render...</div></div></div>';
-        html += '</div>';
-      }
+      // Always render via Pollinations (works without billing) + try Gemini as upgrade
+      var encodedPrompt = encodeURIComponent(fullPrompt);
+      html += '<div id="geminiRender" style="position:relative;display:inline-block;max-width:100%;">';
+      html += '<img id="aiImg" src="https://image.pollinations.ai/prompt/' + encodedPrompt + '?width=768&height=768&nologo=true&seed=' + seed + '&model=flux" style="max-width:100%;border-radius:12px;border:2px solid var(--gold);" alt="Custom Helmet Render" onload="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').style.display=\'none\'" onerror="if(document.getElementById(\'aiSpinner\'))document.getElementById(\'aiSpinner\').innerHTML=\'Taking longer than expected — try Regenerate\'">';
+      html += '<div id="aiSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--dark2);border-radius:12px;"><div style="text-align:center;"><div style="font-size:2.5rem;animation:pulse 1.5s infinite;">🎨</div><div style="font-size:0.88rem;color:var(--gold);margin-top:10px;font-weight:600;">Rendering your helmet...</div><div style="font-size:0.75rem;color:var(--gray);margin-top:4px;">This may take 10-20 seconds</div></div></div>';
       html += '</div>';
       html += '<div style="margin-top:10px;font-size:0.78rem;color:var(--gray);">Concept: <strong style="color:var(--gold);">' + sc.title + '</strong> — ' + (GEMINI_KEY ? 'Nano Banana (Gemini)' : 'AI visualization') + '. Actual hand-painted result will be even better.</div>';
       html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
@@ -1282,8 +1275,9 @@
 
   // Gemini Nano Banana image generation — tries multiple models, falls back to Pollinations
   var GEMINI_MODELS = [
-    'gemini-2.0-flash-preview-image-generation',
-    'gemini-2.0-flash-exp'
+    'gemini-2.5-flash-image',
+    'gemini-3.1-flash-image-preview',
+    'gemini-3-pro-image-preview'
   ];
 
   window._generateGeminiImage = function(prompt, containerId) {
@@ -1353,10 +1347,15 @@
     }
     state.aiSeed = Math.floor(Math.random() * 99999);
 
-    if (GEMINI_KEY && state.selectedConcept !== null) {
+    // Quick swap — update the image src directly without full re-render
+    var imgEl = document.getElementById('aiImg');
+    var spinnerEl = document.getElementById('aiSpinner');
+    if (imgEl) {
       var cpts = generateConcepts('','','','');
       var dir = cpts[state.selectedConcept];
-      window._generateGeminiImage(buildImagePrompt(dir ? dir.desc : '') + ' Variation: ' + state.aiSeed, 'geminiRender');
+      var prompt = encodeURIComponent(buildImagePrompt(dir ? dir.desc : ''));
+      if (spinnerEl) { spinnerEl.style.display = 'flex'; }
+      imgEl.src = 'https://image.pollinations.ai/prompt/' + prompt + '?width=768&height=768&nologo=true&seed=' + state.aiSeed + '&model=flux';
     } else {
       render();
     }
@@ -1705,12 +1704,7 @@
               overlay.style.display = 'none';
               content.style.display = 'block';
               renderHelmetCanvases();
-              // Trigger Gemini if key is set and a concept is selected
-              if (GEMINI_KEY && state.selectedConcept !== null) {
-                var cpts = generateConcepts('','','','');
-                var dir = cpts[state.selectedConcept];
-                window._generateGeminiImage(buildImagePrompt(dir ? dir.desc : ''), 'geminiRender');
-              }
+              // Image renders via Pollinations img src — no JS trigger needed
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 400);
           }
