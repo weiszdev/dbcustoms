@@ -278,6 +278,62 @@
     .inspo-card.selected { border-color: var(--red); background: rgba(230,57,70,0.1); }
     .inspo-card .inspo-label { font-size: 0.68rem; color: var(--gray); margin-top: 4px; }
 
+    /* Helmet Zone Grid */
+    .zone-grid-wrap { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; margin: 16px 0; }
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px);
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .zone-cell {
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .zone-cell:hover { border-color: var(--gray); }
+    .zone-cell.active { border-color: var(--red); box-shadow: 0 0 10px rgba(230,57,70,0.3); }
+    .zone-cell .zone-label { font-size: 0.6rem; color: var(--gray); text-transform: uppercase; letter-spacing: 0.3px; }
+    .zone-cell .zone-fill {
+      position: absolute;
+      inset: 0;
+      opacity: 0.35;
+      border-radius: 6px;
+    }
+    .zone-cell .zone-icon { font-size: 1rem; z-index: 1; }
+    .zone-palette {
+      flex: 1;
+      min-width: 200px;
+    }
+    .zone-palette h4 { font-size: 0.9rem; color: var(--gold); margin-bottom: 8px; text-transform: uppercase; }
+    .zone-assign-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .zone-assign-btn {
+      padding: 8px 4px;
+      background: var(--dark2);
+      border: 2px solid var(--dark3);
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.68rem;
+      color: var(--light);
+      transition: all 0.2s;
+    }
+    .zone-assign-btn:hover { border-color: var(--gray); }
+    .zone-assign-btn.picked { border-color: var(--red); }
+
     /* Navigation */
     .step-nav {
       display: flex;
@@ -501,7 +557,34 @@
     "That's the kind of design that makes people stop and look twice. Let's keep going."
   ];
 
-  var STEP_LABELS = ['Helmet Type','Brand & Model','Design Style','Colors & Finish','Your Vision','Details','Your Design'];
+  var STEP_LABELS = ['Helmet Type','Brand & Model','Design Style','Colors & Finish','Zone Designer','Your Vision','Details','Your Design'];
+
+  var HELMET_ZONES = [
+    { id: 'crown', label: 'Crown', icon: '👑' },
+    { id: 'forehead', label: 'Forehead', icon: '◈' },
+    { id: 'visor', label: 'Visor Area', icon: '👁️' },
+    { id: 'left-temple', label: 'Left Side', icon: '◀' },
+    { id: 'center', label: 'Center', icon: '⬡' },
+    { id: 'right-temple', label: 'Right Side', icon: '▶' },
+    { id: 'left-jaw', label: 'Left Jaw', icon: '◣' },
+    { id: 'chin', label: 'Chin', icon: '▼' },
+    { id: 'right-jaw', label: 'Right Jaw', icon: '◢' }
+  ];
+
+  var ZONE_EFFECTS = [
+    { id: 'solid', label: 'Solid Color' },
+    { id: 'fade', label: 'Gradient Fade' },
+    { id: 'stripe', label: 'Racing Stripe' },
+    { id: 'flames', label: 'Flames' },
+    { id: 'carbon', label: 'Carbon Look' },
+    { id: 'splatter', label: 'Splatter' },
+    { id: 'logo', label: 'Logo Here' },
+    { id: 'number', label: 'Number' },
+    { id: 'blank', label: 'Leave Blank' },
+    { id: 'metal', label: 'Metal Flake' },
+    { id: 'tribal', label: 'Tribal Art' },
+    { id: 'custom', label: 'Custom Art' }
+  ];
 
   // ================================================================
   // STATE
@@ -520,6 +603,8 @@
     number: '',
     refImages: [],
     inspoStyles: [],
+    zones: {},
+    activeZone: null,
     name: '',
     email: '',
     phone: '',
@@ -538,7 +623,7 @@
     var card = document.createElement('div');
     card.className = 'step-card active';
 
-    var steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6];
+    var steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStepZones, renderStep4, renderStep5, renderStep6];
     card.innerHTML = steps[state.step]();
     container.appendChild(card);
 
@@ -649,6 +734,67 @@
       html += '<div class="opt-card' + (state.finish === f.id ? ' selected' : '') + '" data-finish="' + f.id + '">';
       html += '<div class="opt-icon">' + f.icon + '</div><div class="opt-label">' + f.label + '</div><div class="opt-sub">' + f.desc + '</div></div>';
     });
+    html += '</div>';
+
+    html += '<div class="ai-bubble" id="aiBubble"></div></div>';
+    html += navHTML();
+    return html;
+  }
+
+  // Step 4.5: Zone Designer
+  function renderStepZones() {
+    var html = '<div class="step-header"><div class="step-num">Step 5</div><h2>Design Your Zones</h2><p>Tap a zone on the helmet grid, then assign a color or effect. Build your design section by section.</p></div>';
+    html += '<div class="step-body">';
+    html += '<div class="zone-grid-wrap">';
+
+    // 3x3 Grid
+    html += '<div class="zone-grid">';
+    HELMET_ZONES.forEach(function(z) {
+      var zData = state.zones[z.id];
+      var isActive = state.activeZone === z.id;
+      var fillStyle = '';
+      if (zData && zData.color) fillStyle = 'background:' + zData.color + ';';
+      html += '<div class="zone-cell' + (isActive ? ' active' : '') + '" data-zone="' + z.id + '">';
+      if (fillStyle) html += '<div class="zone-fill" style="' + fillStyle + '"></div>';
+      html += '<div class="zone-icon">' + z.icon + '</div>';
+      html += '<div class="zone-label">' + z.label + '</div>';
+      if (zData && zData.effect && zData.effect !== 'solid') {
+        var eff = ZONE_EFFECTS.find(function(e){ return e.id === zData.effect; });
+        html += '<div style="font-size:0.55rem;color:var(--red);z-index:1;margin-top:1px;">' + (eff ? eff.label : '') + '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Palette (shows when zone selected)
+    html += '<div class="zone-palette">';
+    if (state.activeZone) {
+      var activeLabel = HELMET_ZONES.find(function(z){ return z.id === state.activeZone; });
+      html += '<h4>' + (activeLabel ? activeLabel.label : '') + '</h4>';
+
+      // Color assignment
+      html += '<div class="color-label" style="margin-bottom:6px;">Assign Color</div>';
+      html += '<div class="color-row" style="margin-bottom:12px;">';
+      COLORS.slice(0, 12).forEach(function(c) {
+        var zData = state.zones[state.activeZone];
+        var sel = zData && zData.color === c.hex;
+        html += '<div class="color-swatch' + (sel ? ' selected' : '') + '" style="background:' + c.hex + ';width:32px;height:32px;" data-zcolor="' + c.hex + '" title="' + c.name + '"></div>';
+      });
+      html += '</div>';
+
+      // Effect assignment
+      html += '<div class="color-label" style="margin-bottom:6px;">Assign Effect</div>';
+      html += '<div class="zone-assign-grid">';
+      ZONE_EFFECTS.forEach(function(e) {
+        var zData = state.zones[state.activeZone];
+        var sel = zData && zData.effect === e.id;
+        html += '<div class="zone-assign-btn' + (sel ? ' picked' : '') + '" data-zeffect="' + e.id + '">' + e.label + '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="color:var(--gray);font-size:0.88rem;padding:20px 0;">Tap a zone on the grid to start designing that section of your helmet.</div>';
+    }
+    html += '</div>';
     html += '</div>';
 
     html += '<div class="ai-bubble" id="aiBubble"></div></div>';
@@ -786,6 +932,18 @@
     lines.push('Finish: ' + (state.finish || ''));
     if (state.number) lines.push('Number: ' + state.number);
     if (state.logos) lines.push('Logos: ' + state.logos);
+    // Zone assignments
+    var zoneKeys = Object.keys(state.zones);
+    if (zoneKeys.length > 0) {
+      lines.push('');
+      lines.push('ZONE DESIGN MAP:');
+      zoneKeys.forEach(function(zk) {
+        var zd = state.zones[zk];
+        var label = HELMET_ZONES.find(function(z){ return z.id === zk; });
+        var effLabel = zd.effect ? ZONE_EFFECTS.find(function(e){ return e.id === zd.effect; }) : null;
+        lines.push('  ' + (label ? label.label : zk) + ': ' + (zd.color || 'no color') + ' / ' + (effLabel ? effLabel.label : 'solid'));
+      });
+    }
     lines.push('');
     if (state.description) { lines.push('Vision: ' + state.description); lines.push(''); }
     lines.push('Name: ' + state.name);
@@ -801,7 +959,7 @@
   function navHTML() {
     return '<div class="step-nav">' +
       '<button class="nav-btn prev" id="prevBtn"' + (state.step === 0 ? ' disabled' : '') + '>&larr; Back</button>' +
-      '<button class="nav-btn next" id="nextBtn">' + (state.step === 5 ? 'See My Design &rarr;' : 'Next &rarr;') + '</button>' +
+      '<button class="nav-btn next" id="nextBtn">' + (state.step === 6 ? 'See My Design &rarr;' : 'Next &rarr;') + '</button>' +
       '</div>';
   }
 
@@ -862,6 +1020,35 @@
       });
     });
 
+    // Zone grid
+    document.querySelectorAll('.zone-cell[data-zone]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        state.activeZone = el.getAttribute('data-zone');
+        if (!state.zones[state.activeZone]) state.zones[state.activeZone] = {};
+        render();
+      });
+    });
+    document.querySelectorAll('[data-zcolor]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        if (state.activeZone) {
+          if (!state.zones[state.activeZone]) state.zones[state.activeZone] = {};
+          state.zones[state.activeZone].color = el.getAttribute('data-zcolor');
+          showAI();
+          render();
+        }
+      });
+    });
+    document.querySelectorAll('[data-zeffect]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        if (state.activeZone) {
+          if (!state.zones[state.activeZone]) state.zones[state.activeZone] = {};
+          state.zones[state.activeZone].effect = el.getAttribute('data-zeffect');
+          showAI();
+          render();
+        }
+      });
+    });
+
     // Text inputs
     var inputs = { modelInput: 'model', descInput: 'description', logosInput: 'logos', numberInput: 'number', nameInput: 'name', emailInput: 'email', phoneInput: 'phone' };
     Object.keys(inputs).forEach(function(id) {
@@ -914,7 +1101,7 @@
   }
 
   window._restart = function() {
-    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], name:'', email:'', phone:'', timeline:'', budget:'' };
+    state = { step:0, type:null, brand:null, model:'', styles:[], colors:[], customColors:[], finish:null, description:'', logos:'', number:'', refImages:[], inspoStyles:[], zones:{}, activeZone:null, name:'', email:'', phone:'', timeline:'', budget:'' };
     render();
     window.scrollTo(0, 0);
   };
